@@ -36,7 +36,7 @@
     }
   };
 
-  // --- ADMIN FEATURE: ADD BOOK ---
+  // --- FITUR TAMBAH BUKU (ADMIN) ---
   window.addNewBook = function() {
     const title = document.getElementById('new-book-title').value;
     const url = document.getElementById('new-book-url').value;
@@ -44,7 +44,8 @@
 
     if(title && url) {
       const booksRef = ref(db, 'books');
-      push(booksRef, { title, url, cover, timestamp: Date.now() })
+      const newBookRef = push(booksRef);
+      set(newBookRef, { title, url, cover, timestamp: Date.now() })
       .then(() => {
         alert("Majalah berhasil ditambahkan!");
         document.getElementById('add-book-form').reset();
@@ -67,6 +68,7 @@
       lp.style.opacity = '0';
       setTimeout(() => { lp.style.display = 'none'; }, 800);
       
+      // Load Books From Firebase
       listenToBooks();
       renderHistory();
     }
@@ -79,12 +81,13 @@
       container.innerHTML = '';
       if(data) {
         Object.values(data).reverse().map(book => {
-          container.innerHTML += `
+          const bookHtml = `
             <div class="book-item">
               <span class="badge-new">NEW</span>
               <div class="book-box" style="background-image: url('${book.cover}');" onclick="playClick(); openBook('${book.url}', '${book.title}')"></div>
               <p class="book-title">${book.title}</p>
             </div>`;
+          container.innerHTML += bookHtml;
         });
       }
     });
@@ -120,7 +123,7 @@
 </script>
 
 <style>
-/* --- STYLES REMAINING INTACT --- */
+/* ... CSS ORIGINAL KAMU ... */
 #landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.8s ease; }
 .logo-landing { width: 120px; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
 .welcome-title { font-size: 2.2em; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 30px; text-align: center; background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: textShine 4s linear infinite; color: #d7ccc8; }
@@ -135,22 +138,22 @@ body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, 
 .book-box { width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px; cursor: pointer; position: relative; transition: all 0.5s; box-shadow: -5px 5px 15px rgba(0,0,0,0.5); -webkit-box-reflect: below 2px linear-gradient(transparent, transparent 50%, rgba(255,255,255,0.1)); }
 .book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
 .book-title { margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; color: #d7ccc8; }
-.badge-new { position: absolute; top: -10px; right: -10px; background: #d4af37; color: #1a0f0d; padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; box-shadow: 0 0 15px #d4af37; z-index: 10; }
 
-/* Coming Soon Style */
-.coming-soon { opacity: 0.4; filter: grayscale(1); cursor: not-allowed !important; border: 2px dashed #d4af37; background: rgba(0,0,0,0.4) !important; }
-.badge-soon { background: #555 !important; color: #fff !important; box-shadow: none !important; }
+/* Gaya Coming Soon */
+.coming-soon { opacity: 0.5; filter: grayscale(1); cursor: not-allowed !important; border: 2px dashed #d4af37; background: rgba(0,0,0,0.4) !important; }
+.coming-soon:hover { transform: none !important; box-shadow: none !important; }
+.badge-soon { background: #555 !important; color: #fff !important; box-shadow: none !important; animation: none !important; }
 
 /* Admin Form Style */
 .admin-card { width: 100%; max-width: 900px; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px; border: 1px solid rgba(212, 175, 55, 0.2); margin-bottom: 20px; }
-.admin-input { background: rgba(255,255,255,0.1); border: 1px solid #d4af37; color: white; padding: 10px; border-radius: 5px; width: calc(33% - 20px); margin: 5px; box-sizing: border-box; }
-.admin-add-btn { background: #d4af37; color: #1a0f0d; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 5px; }
+.admin-input { background: rgba(255,255,255,0.1); border: 1px solid #d4af37; color: white; padding: 10px; border-radius: 5px; width: calc(33% - 20px); margin: 5px; }
+.admin-add-btn { background: #d4af37; color: #1a0f0d; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
 
-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+table { width: 100%; border-collapse: collapse; }
 th { text-align: left; padding: 12px; border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em; }
 td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9em; }
 nav { position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95); backdrop-filter: blur(8px); display: flex; justify-content: center; gap: 15px; padding: 20px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2); }
-.nav-btn { background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 0.8em; }
+.nav-btn { background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 0.8em; display: flex; align-items: center; gap: 10px; }
 .page { display: none; width: 100%; padding-bottom: 120px; }
 .active { display: block; }
 #reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; }
@@ -171,7 +174,7 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 
 <div id="home" class="page active">
   <div class="main-container">
-    <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-main" style="width:80px; margin-bottom:10px;">
+    <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-main">
     <h2 class="welcome-title">Digital Archive</h2>
 
     <div class="library-shelf">
@@ -188,7 +191,13 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
       <div class="book-item">
         <span class="badge-new badge-soon">SOON</span>
         <div class="book-box coming-soon"></div>
-        <p class="book-title" style="opacity:0.5">Next Edition<br>(Coming Soon)</p>
+        <p class="book-title" style="opacity:0.5">May Edition<br>(Coming Soon)</p>
+      </div>
+
+      <div class="book-item">
+        <span class="badge-new badge-soon">SOON</span>
+        <div class="book-box coming-soon"></div>
+        <p class="book-title" style="opacity:0.5">June Edition<br>(Coming Soon)</p>
       </div>
     </div>
   </div>
@@ -201,15 +210,15 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
     <div class="admin-card" id="admin-add-section" style="display:none;">
       <h3 style="color:#d4af37; margin-top:0;">+ Tambah Majalah Baru</h3>
       <form id="add-book-form" onsubmit="event.preventDefault(); addNewBook();">
-        <input type="text" id="new-book-title" class="admin-input" placeholder="Judul (Edisi Mei)" required>
-        <input type="url" id="new-book-url" class="admin-input" placeholder="URL Majalah" required>
+        <input type="text" id="new-book-title" class="admin-input" placeholder="Judul Edisi (Contoh: Edisi Mei)" required>
+        <input type="url" id="new-book-url" class="admin-input" placeholder="URL Heyzine/FlipHTML5" required>
         <input type="url" id="new-book-cover" class="admin-input" placeholder="URL Cover (Opsional)">
-        <button type="submit" class="admin-add-btn">Posting</button>
+        <button type="submit" class="admin-add-btn">Posting Majalah</button>
       </form>
     </div>
 
     <div class="admin-card">
-      <h3 style="color:#d4af37; margin-top:0;">User Activity Logs</h3>
+      <h3 style="color:#d4af37; margin-top:0;">User Logs</h3>
       <table>
         <thead>
           <tr><th>User</th><th>Email</th><th>Reading</th><th>Waktu</th></tr>
@@ -222,7 +231,7 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 
 <div id="history-page" class="page">
   <div class="main-container">
-    <h2 class="welcome-title">Reading History</h2>
+    <h2 class="welcome-title">Your Reading History</h2>
     <div id="history-list" style="display:flex; flex-wrap:wrap; gap:30px; justify-content:center;"></div>
   </div>
 </div>
@@ -233,14 +242,15 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 </div>
 
 <nav>
-  <button class="nav-btn" onclick="playClick(); showPage('home')">Lobby</button>
+  <button class="nav-btn" onclick="playClick(); showPage('home')">Main Lobby</button>
   <button class="nav-btn" onclick="playClick(); renderHistory(); showPage('history-page')">History</button>
   <button class="nav-btn" id="admin-nav-btn" style="display:none;" onclick="playClick(); showPage('admin-page')">Admin</button>
-  <button class="nav-btn" onclick="playClick(); toggleMusic()"><span id="music-text">Play Music</span></button>
+  <button class="nav-btn" id="music-toggle" onclick="playClick(); toggleMusic()"><span id="music-text">Play Music</span></button>
   <button class="nav-btn" onclick="logoutLibrary()" style="color:#ff5252; border-color:#ff5252;">Logout</button>
 </nav>
 
 <script>
+// Logic SFX, Music, Reader (sama seperti sebelumnya)
 const bgMusic = document.getElementById('bg-music');
 function playClick() { const sfx = document.getElementById('click-sfx'); sfx.currentTime = 0; sfx.play(); }
 function showPage(id){
