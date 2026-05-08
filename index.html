@@ -8,6 +8,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  // FITUR DATABASE TAMBAHAN
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
@@ -17,57 +18,66 @@
     projectId: "mandala-b17d0",
     storageBucket: "mandala-b17d0.firebasestorage.app",
     messagingSenderId: "979224717164",
-    appId: "1:979224717164:web:6ec6d5e3545821fa22b549"
+    appId: "1:979224717164:web:6ec6d5e3545821fa22b549",
+    measurementId: "G-3Y8HD5WFH7"
   };
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getDatabase(app);
+  const db = getDatabase(app); // Hubungkan Database
   const provider = new GoogleAuthProvider();
+
   const ADMIN_EMAIL = "arvnn.ad4m@gmail.com";
 
   window.startLibrary = function() {
-    signInWithPopup(auth, provider).catch((err) => alert("Login gagal: " + err.message));
+    signInWithPopup(auth, provider).catch((err) => {
+      alert("Login gagal: " + err.message);
+    });
   };
 
   window.logoutLibrary = function() {
     if(confirm("Apakah Anda yakin ingin keluar?")) {
-      signOut(auth).then(() => location.reload());
+      signOut(auth).then(() => {
+        location.reload(); 
+      });
     }
   };
 
   onAuthStateChanged(auth, (user) => {
     if (user) {
+      window.currentUser = user.displayName;
       window.userEmail = user.email;
-      window.userName = user.displayName;
       
-      const greeting = document.getElementById('user-greeting');
+      // PERUBAHAN NAMA ADMIN arv1ent
       if(user.email === ADMIN_EMAIL) {
-        greeting.textContent = "Halo, arv1ent!";
+        document.getElementById('user-greeting').textContent = "Halo, arv1ent!";
         document.getElementById('admin-nav-btn').style.display = 'flex';
-        listenToUserLogs();
+        listenToUserLogs(); // Jalankan pemantauan admin
       } else {
-        greeting.textContent = "Halo, " + user.displayName + "!";
+        document.getElementById('user-greeting').textContent = "Halo, " + user.displayName + "!";
       }
 
       const lp = document.getElementById('landing-page');
       lp.style.opacity = '0';
       setTimeout(() => { lp.style.display = 'none'; }, 800);
+      
       renderHistory();
     }
   });
 
+  // FUNGSI LOG KE FIREBASE
   window.logToFirebase = function(bookTitle) {
     if (!window.userEmail) return;
     const safeEmail = window.userEmail.replace(/\./g, ',');
     set(ref(db, 'logs/' + safeEmail), {
-      name: window.userName,
+      name: window.currentUser,
       email: window.userEmail,
       lastRead: bookTitle,
       time: new Date().toLocaleString('id-ID')
     });
   };
 
+  // FUNGSI ADMIN PEMANTAU DATA
   function listenToUserLogs() {
     onValue(ref(db, 'logs'), (snapshot) => {
       const data = snapshot.val();
@@ -76,8 +86,8 @@
         tbody.innerHTML = Object.values(data).map(user => `
           <tr>
             <td>${user.name}</td>
-            <td>${user.lastRead}</td>
-            <td style="font-size:0.8em; opacity:0.6">${user.time}</td>
+            <td>${user.email}</td>
+            <td style="color:#d4af37; font-weight:bold">${user.lastRead}</td>
           </tr>
         `).join('');
       }
@@ -86,134 +96,145 @@
 </script>
 
 <style>
-/* --- BASE CSS --- */
-* { box-sizing: border-box; }
-body {
-  margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
-  background: #1a0f0d; background-image: radial-gradient(circle at center, #3d2b27 0%, #1a0f0d 100%);
-  color: #efebe9; min-height: 100vh; overflow-x: hidden;
-}
-
-/* --- LANDING PAGE (PRESISI) --- */
+/* --- BASE CSS & ANIMATIONS (Sesuai Rancangan Awalmu) --- */
 #landing-page {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: radial-gradient(circle at center, #4e342e 0%, #1a0f0d 100%); 
+  background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
   display: flex; flex-direction: column; justify-content: center; align-items: center;
-  z-index: 1000; transition: 0.8s; text-align: center;
+  z-index: 1000; transition: opacity 0.8s ease;
 }
-
-.logo-container { margin-bottom: 20px; display: flex; justify-content: center; }
-.logo-landing { width: 110px; filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4)); }
+.logo-landing { width: 120px; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
 
 .welcome-title {
-  font-size: 2.2em; letter-spacing: 8px; text-transform: uppercase; margin-bottom: 40px;
+  font-size: 2.2em; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 30px; text-align: center;
   background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%);
-  background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; animation: shine 4s linear infinite;
+  background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: textShine 4s linear infinite; color: #d7ccc8;
 }
 
-.login-btn-custom {
-  background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.5);
-  backdrop-filter: blur(10px); color: #fff; padding: 15px 40px; border-radius: 50px;
-  font-weight: bold; letter-spacing: 2px; cursor: pointer; transition: 0.4s; text-transform: uppercase;
+/* LOGIN BUTTON BEAUTIFIED */
+.enter-btn { 
+  background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(212, 175, 55, 0.5); 
+  backdrop-filter: blur(10px); padding: 14px 45px; border-radius: 40px; font-weight: bold; 
+  text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: 0.4s; 
+  display: flex; align-items: center; gap: 15px; 
 }
-.login-btn-custom:hover { background: #d4af37; color: #1a0f0d; box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); transform: translateY(-3px); }
+.enter-btn:hover { background: #d4af37; color: #1a0f0d; box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
 
-/* --- MAIN CONTENT --- */
-.main-container { padding: 40px 20px; display: flex; flex-direction: column; align-items: center; padding-bottom: 120px; }
-.logo-main { width: 70px; margin-bottom: 15px; }
+body {
+  margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #1a0f0d; background-image: radial-gradient(circle at center, #3d2b27 0%, #1a0f0d 100%);
+  color: #efebe9; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
+}
 
-.search-wrapper { margin: 20px 0 40px 0; width: 100%; max-width: 450px; }
+.main-container { width: 100%; max-width: 1100px; margin: 40px auto; padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
+.logo-main { width: 80px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.2)); }
+
+.search-wrapper { margin-bottom: 30px; width: 100%; max-width: 400px; position: relative; }
 .search-input {
-  width: 100%; padding: 14px 25px; border-radius: 30px; border: 1px solid rgba(212, 175, 55, 0.3);
-  background: rgba(26, 15, 13, 0.6); color: white; outline: none; text-align: center;
+  width: 100%; padding: 12px 20px; border-radius: 25px; border: 1px solid rgba(212, 175, 55, 0.4);
+  background: rgba(45, 27, 24, 0.8); color: white; outline: none; transition: 0.3s; text-align: center;
 }
 
 .library-shelf {
-  background: #2d1b18; border: 12px solid #1a0f0d; border-radius: 4px;
-  padding: 80px 20px 40px 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 30px;
-  box-shadow: inset 0 0 100px #000; position: relative; width: 100%; max-width: 1050px;
+  width: 100%; background: #2d1b18; border: 12px solid #1a0f0d;
+  box-shadow: inset 0 0 100px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6);
+  padding: 80px 20px 40px 20px; position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; border-radius: 4px; box-sizing: border-box;
 }
-.shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 180px; height: 15px; background: #333; border-bottom: 3px solid #d4af37; }
 
-.book-item { width: 165px; text-align: center; animation: float 6s ease-in-out infinite; }
+.shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 160px; height: 15px; background: linear-gradient(to bottom, #444, #222); border-bottom: 3px solid #d4af37; border-radius: 8px 8px 0 0; z-index: 10; }
+.lamp-glow { position: absolute; top: 7px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; height: 350px; background: radial-gradient(ellipse at top, rgba(212, 175, 55, 0.15) 0%, transparent 75%); pointer-events: none; }
+
+/* BOOK STYLES */
+.book-item { display: flex; flex-direction: column; align-items: center; width: 170px; z-index: 2; margin-bottom: 20px; position: relative; animation: float-book 6s ease-in-out infinite; transition: 0.5s; }
+@keyframes float-book { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
 .book-box {
-  width: 100%; height: 240px; background-size: cover; border-radius: 2px 8px 8px 2px;
-  cursor: pointer; box-shadow: -5px 10px 20px rgba(0,0,0,0.6); transition: 0.4s;
+  width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px; cursor: pointer; position: relative; transition: all 0.5s; box-shadow: -5px 5px 15px rgba(0,0,0,0.5);
+  -webkit-box-reflect: below 2px linear-gradient(transparent, transparent 50%, rgba(255,255,255,0.1));
 }
-.book-box:hover { transform: scale(1.06) translateY(-10px); box-shadow: 0 0 30px #d4af37; }
+.book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
 
-/* Mystery Book Style */
-.book-locked { filter: grayscale(1) contrast(0.8); position: relative; cursor: not-allowed !important; }
-.book-locked::after { content: '🔒'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3em; opacity: 0.7; }
+/* COMING SOON BOOK EFFECT */
+.book-coming-soon { filter: grayscale(1); opacity: 0.7; cursor: not-allowed; }
+.book-coming-soon::after { content: '🔒'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5em; opacity: 0.8; }
 
-/* --- NAVIGATION --- */
+.book-title { margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; line-height: 1.4; color: #d7ccc8; }
+
+/* ADMIN & TABLE */
+.admin-card { background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 15px; width: 100%; padding: 20px; margin-top: 20px; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
+th { text-align: left; border-bottom: 1px solid #d4af37; padding: 10px; color: #d4af37; }
+td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+/* FOOTER NAV */
 nav {
-  position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.96);
-  display: flex; justify-content: center; gap: 12px; padding: 18px 0; z-index: 100;
-  border-top: 1px solid rgba(212, 175, 55, 0.2); backdrop-filter: blur(10px);
+  position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95); backdrop-filter: blur(8px);
+  display: flex; justify-content: center; gap: 10px; padding: 15px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
 .nav-btn {
-  background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 20px;
-  border-radius: 30px; cursor: pointer; font-weight: bold; font-size: 0.75em; display: flex; align-items: center; gap: 8px;
+  background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 8px 18px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 8px; font-size: 0.8em;
 }
+.nav-btn:hover { background: #d4af37; color: #1a0f0d; }
+.equalizer { display: flex; align-items: flex-end; gap: 3px; height: 18px; width: 22px; }
+.eq-bar { width: 4px; background: #fff59d; animation: eq-anim 0.5s ease-in-out infinite alternate; animation-play-state: paused; border-radius: 1px; }
+@keyframes eq-anim { 0% { height: 4px; } 100% { height: 18px; } }
 
-@keyframes shine { to { background-position: 200% center; } }
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-
-.equalizer { display: flex; align-items: flex-end; gap: 3px; height: 16px; }
-.eq-bar { width: 3px; background: #fff59d; animation: eq 0.5s infinite alternate; animation-play-state: paused; }
-@keyframes eq { 0% { height: 4px; } 100% { height: 16px; } }
-
-.page { display: none; width: 100%; }
+.page { display: none; width: 100%; padding-bottom: 120px; }
 .active { display: block; }
 #reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; }
 iframe { width: 100%; height: calc(100vh - 65px); border: none; }
+.btn-back { background: #2b1d1a; color: #d4af37; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; }
+
+@keyframes textShine { to { background-position: 200% center; } }
 </style>
 </head>
+
 <body>
 
-<audio id="bg-music" src="https://raw.githubusercontent.com/arvnnad4m-jpg/chill-backsound/bdf81b6bee6dd2efd7219431a2f09b4a9132e533/felixdump-love-shine-by-leeheesang-instrumental.mp3" loop></audio>
-<audio id="click-sfx" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"></audio>
+<audio id="click-sfx" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+<audio id="bg-music" src="https://raw.githubusercontent.com/arvnnad4m-jpg/chill-backsound/bdf81b6bee6dd2efd7219431a2f09b4a9132e533/felixdump-love-shine-by-leeheesang-instrumental.mp3" preload="auto" loop></audio>
 
 <div id="landing-page">
-  <div class="logo-container">
-    <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-landing">
-  </div>
+  <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" alt="Logo" class="logo-landing">
   <div class="welcome-title">Smanda Library</div>
-  <button class="login-btn-custom" onclick="playClick(); startLibrary()">Akses Koleksi Digital</button>
+  <button class="enter-btn" onclick="playClick(); startLibrary()">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" style="background:white; border-radius:50%; padding:2px;">
+    Masuk Koleksi
+  </button>
 </div>
 
 <div id="home" class="page active">
   <div class="main-container">
-    <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-main">
-    <div id="user-greeting" style="color:#d4af37; margin-bottom: 10px; font-weight: bold; letter-spacing: 1px;"></div>
+    <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" alt="Logo" class="logo-main">
+    <div id="user-greeting" style="text-align: center; color: #d4af37; font-weight: bold; margin-bottom: 10px;"></div>
     
     <div class="search-wrapper">
-      <input type="text" id="search-bar" class="search-input" placeholder="Cari Edisi Majalah..." onkeyup="filterBooks()">
+      <input type="text" class="search-input" id="search-bar" placeholder="Cari Edisi Majalah..." onkeyup="filterBooks()">
     </div>
 
-    <div class="library-shelf">
+    <div class="library-shelf" id="shelf-container">
       <div class="shelf-lamp"></div>
+      <div class="lamp-glow"></div>
       
       <div class="book-item" data-title="November Edition">
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/905f390c0d.html', 'November Edition')"></div>
-        <p class="book-title">November Edition</p>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/905f390c0d.html', 'November Edition')"></div>
+        <p class="book-title">Smanda Vibes (November)</p>
       </div>
 
       <div class="book-item" data-title="January Edition">
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/44752310d5.html', 'January Edition')"></div>
-        <p class="book-title">January Edition</p>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/44752310d5.html', 'January Edition')"></div>
+        <p class="book-title">Smanda Vibes (January)</p>
       </div>
 
-      <div class="book-item" data-title="Secret Edition">
-        <div class="book-box book-locked" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="alert('Sssttt! Edisi ini masih dirahasiakan. Tunggu tanggal mainnya ya!')"></div>
+      <div class="book-item" data-title="Coming Soon">
+        <div class="book-box book-coming-soon" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="alert('Sabar ya! Edisi ini sedang dalam proses penyusunan.')"></div>
         <p class="book-title" style="opacity:0.5">Coming Soon...</p>
       </div>
 
       <div class="book-item" data-title="April Edition">
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/1caa336792.html', 'April Edition')"></div>
-        <p class="book-title">April Edition</p>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'April Edition')"></div>
+        <p class="book-title">Smanda Vibes (April)</p>
       </div>
     </div>
   </div>
@@ -221,108 +242,122 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 
 <div id="history-page" class="page">
   <div class="main-container">
-    <h2 style="letter-spacing: 5px;">READING HISTORY</h2>
-    <div id="history-list" style="display:flex; flex-wrap:wrap; gap:30px; justify-content:center; width:100%;"></div>
+    <h2 style="letter-spacing: 5px;">HISTORY</h2>
+    <div id="history-list" style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center;"></div>
   </div>
 </div>
 
 <div id="admin-page" class="page">
   <div class="main-container">
-    <h2 style="color:#d4af37">ADMIN LOGS (REAL-TIME)</h2>
-    <div style="width:100%; max-width:800px; background:rgba(0,0,0,0.4); border-radius:15px; padding:20px; overflow-x:auto;">
-      <table style="width:100%; border-collapse: collapse; text-align:left;">
-        <thead style="border-bottom: 2px solid #d4af37;">
-          <tr><th style="padding:10px;">User</th><th>Book</th><th>Time</th></tr>
+    <h2 style="color:#d4af37">ADMIN DASHBOARD</h2>
+    <div class="admin-card">
+      <table id="admin-table">
+        <thead>
+          <tr>
+            <th>Nama User</th>
+            <th>Email</th>
+            <th>Edisi Terakhir</th>
+          </tr>
         </thead>
-        <tbody id="admin-log-body"></tbody>
+        <tbody id="admin-log-body">
+          </tbody>
       </table>
     </div>
   </div>
 </div>
 
 <div id="reader" class="page">
-  <button onclick="playClick(); showPage('home')" style="width:100%; padding:18px; background:#1a0f0d; color:#d4af37; border:none; cursor:pointer; font-weight:bold; border-bottom:1px solid #d4af37;">← KEMBALI KE RAK BUKU</button>
-  <iframe id="book-frame" src=""></iframe>
+  <button class="btn-back" onclick="playClick(); showPage('home')">← KEMBALI KE RAK</button>
+  <iframe id="book-frame" src="" allowfullscreen></iframe>
 </div>
 
-<nav>
+<nav id="footer-nav">
   <button class="nav-btn" onclick="playClick(); showPage('home')">Lobby</button>
   <button class="nav-btn" onclick="playClick(); renderHistory(); showPage('history-page')">History</button>
   <button class="nav-btn" id="admin-nav-btn" style="display:none;" onclick="playClick(); showPage('admin-page')">Admin</button>
-  <button class="nav-btn" id="music-btn" onclick="playClick(); toggleMusic()">
+  <button class="nav-btn" id="music-toggle" onclick="playClick(); toggleMusic()">
     <span id="music-text">Music</span>
-    <div class="equalizer"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>
+    <div class="equalizer">
+      <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+    </div>
   </button>
-  <button class="nav-btn" onclick="logoutLibrary()" style="color:#ff5252; border-color:#ff5252;">Logout</button>
+  <button class="nav-btn" style="border-color:#ff5252; color:#ff5252;" onclick="logoutLibrary()">Logout</button>
 </nav>
 
 <script>
 const bgMusic = document.getElementById('bg-music');
 const eqBars = document.querySelectorAll('.eq-bar');
 
-function playClick() { document.getElementById('click-sfx').currentTime = 0; document.getElementById('click-sfx').play(); }
-
 function filterBooks() {
-  const q = document.getElementById('search-bar').value.toLowerCase();
-  document.querySelectorAll('.book-item').forEach(b => {
-    b.style.display = b.getAttribute('data-title').toLowerCase().includes(q) ? 'block' : 'none';
+  const query = document.getElementById('search-bar').value.toLowerCase();
+  document.querySelectorAll('.book-item').forEach(book => {
+    const title = book.getAttribute('data-title').toLowerCase();
+    book.style.display = title.includes(query) ? 'flex' : 'none';
   });
 }
 
-function showPage(id) {
+function showPage(id){
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  if(id === 'reader') { fadeVolume(0.2); } 
-  else { document.getElementById('book-frame').src = ""; fadeVolume(1.0); }
-}
-
-function openBook(url, title) {
-  document.getElementById('book-frame').src = url;
-  showPage('reader');
-  saveHistory(title, url);
-  if(window.logToFirebase) window.logToFirebase(title);
-}
-
-function fadeVolume(target) {
-  if(bgMusic.paused) return;
-  let v = bgMusic.volume;
-  const interval = setInterval(() => {
-    if(v < target) v = Math.min(v + 0.05, target);
-    else v = Math.max(v - 0.05, target);
-    bgMusic.volume = v;
-    if(v === target) clearInterval(interval);
-  }, 50);
+  if(id === 'home' || id === 'history-page' || id === 'admin-page') { 
+    document.getElementById('book-frame').src = ""; fadeVolume(1.0); 
+  } else if(id === 'reader') { 
+    fadeVolume(0.3); 
+  }
+  window.scrollTo(0,0);
 }
 
 function toggleMusic() {
-  if(bgMusic.paused) {
+  if (bgMusic.paused) {
     bgMusic.play();
     document.getElementById('music-text').textContent = "Pause";
-    eqBars.forEach(b => b.style.animationPlayState = 'running');
+    eqBars.forEach(bar => bar.style.animationPlayState = 'running');
   } else {
     bgMusic.pause();
     document.getElementById('music-text').textContent = "Music";
-    eqBars.forEach(b => b.style.animationPlayState = 'paused');
+    eqBars.forEach(bar => bar.style.animationPlayState = 'paused');
   }
 }
 
+function fadeVolume(target) {
+  if (bgMusic.paused) return;
+  let v = bgMusic.volume;
+  const i = setInterval(() => {
+    if (v < target) v = Math.min(v + 0.05, target);
+    else v = Math.max(v - 0.05, target);
+    bgMusic.volume = v;
+    if (v === target) clearInterval(i);
+  }, 50);
+}
+
+function openBook(url, title){ 
+  saveHistory(title, url);
+  document.getElementById('book-frame').src = url; 
+  showPage('reader'); 
+  if(window.logToFirebase) window.logToFirebase(title); // Lapor Firebase
+}
+
 function saveHistory(title, url) {
-  let h = JSON.parse(localStorage.getItem('lib_h')) || [];
-  h = h.filter(x => x.title !== title);
-  h.unshift({title, url, date: new Date().toLocaleDateString()});
-  localStorage.setItem('lib_h', JSON.stringify(h.slice(0, 8)));
+  let key = "smanda_history_" + (window.userEmail || "guest");
+  let history = JSON.parse(localStorage.getItem(key)) || [];
+  history = history.filter(item => item.title !== title);
+  history.unshift({ title, url, date: new Date().toLocaleDateString() });
+  localStorage.setItem(key, JSON.stringify(history.slice(0, 10)));
 }
 
 function renderHistory() {
-  const h = JSON.parse(localStorage.getItem('lib_h')) || [];
+  const key = "smanda_history_" + (window.userEmail || "guest");
+  const history = JSON.parse(localStorage.getItem(key)) || [];
   const list = document.getElementById('history-list');
-  list.innerHTML = h.map(x => `
-    <div class="book-item" style="animation:none;">
-      <div class="book-box" style="height:180px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('${x.url}', '${x.title}')"></div>
-      <p style="font-size:0.7em; margin-top:10px;">${x.title}<br><span style="opacity:0.5">${x.date}</span></p>
+  list.innerHTML = history.map(h => `
+    <div class="book-item" style="animation:none; width:140px;">
+      <div class="book-box" style="width:130px; height:180px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('${h.url}', '${h.title}')"></div>
+      <p style="font-size:0.7em; margin-top:10px;">${h.title}<br><span style="opacity:0.5">${h.date}</span></p>
     </div>
   `).join('');
 }
+
+function playClick() { const sfx = document.getElementById('click-sfx'); sfx.currentTime = 0; sfx.play(); }
 </script>
 </body>
 </html>
