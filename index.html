@@ -8,7 +8,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getFirestore, doc, setDoc, updateDoc, increment, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAsYNPWyoeERQ1tVolEyVIqNf8GSFkhbGY",
@@ -26,56 +26,36 @@
   const db = getFirestore(app);
   const provider = new GoogleAuthProvider();
 
-  // --- LOGIKA LOGIN ---
   window.startLibrary = function() {
-    signInWithPopup(auth, provider).catch((err) => alert("Gagal: " + err.message));
+    signInWithPopup(auth, provider).catch((err) => alert("Login gagal: " + err.message));
   };
 
   window.logoutLibrary = function() {
-    if(confirm("Keluar dari sistem?")) signOut(auth).then(() => location.reload());
+    if(confirm("Apakah Anda yakin ingin keluar?")) {
+      signOut(auth).then(() => location.reload());
+    }
   };
 
   onAuthStateChanged(auth, (user) => {
     if (user) {
-      window.currentUser = user;
+      window.currentUser = user.displayName;
+      window.userEmail = user.email;
       document.getElementById('user-greeting').textContent = "Halo, " + user.displayName + "!";
-      document.getElementById('landing-page').style.display = 'none';
-      if(user.email === "arvnn.ad4m@gmail.com") document.getElementById('admin-nav').style.display = 'flex';
+      
+      // Cek akses admin (Ganti email di bawah dengan email Anda)
+      if(user.email === "admin@pustaka.com") {
+        document.getElementById('admin-btn').style.display = 'flex';
+      }
+
+      const lp = document.getElementById('landing-page');
+      lp.style.opacity = '0';
+      setTimeout(() => { lp.style.display = 'none'; }, 800);
+      if (bgMusic.paused) { bgMusic.play().catch(() => {}); }
       renderHistory();
     }
   });
 
-  // --- SISTEM KOMENTAR & STATISTIK ---
-  window.sendComment = async function() {
-    const text = document.getElementById('comment-input').value;
-    const bookTitle = document.getElementById('reading-title-header').textContent;
-    if(!text) return;
-    await addDoc(collection(db, "comments"), {
-      user: window.currentUser.displayName,
-      text: text,
-      book: bookTitle,
-      time: Date.now()
-    });
-    document.getElementById('comment-input').value = "";
-  };
-
-  window.loadComments = function(bookTitle) {
-    const q = query(collection(db, "comments"), orderBy("time", "desc"));
-    onSnapshot(q, (snapshot) => {
-      const list = document.getElementById('comment-list');
-      list.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if(data.book === bookTitle) {
-          list.innerHTML += `<div style="border-bottom:1px solid #4e342e; padding:10px 0;">
-            <b style="color:#d4af37; font-size:0.8em;">${data.user}</b>: 
-            <span style="font-size:0.85em;">${data.text}</span>
-          </div>`;
-        }
-      });
-    });
-  };
-
+  // Fitur Statistik Pembaca (Firestore)
   window.updateStats = async function(bookTitle) {
     const statRef = doc(db, "stats", bookTitle);
     await setDoc(statRef, { views: increment(1) }, { merge: true });
@@ -83,105 +63,193 @@
 </script>
 
 <style>
-/* CSS ASLI TETAP DIBAWA (Disederhanakan untuk ruang) */
-#landing-page { position: fixed; inset: 0; background: radial-gradient(circle, #4e342e, #1a0f0d); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 3000; }
-.enter-btn { background: #5d4037; color: #fff; border: 1px solid #d4af37; padding: 12px 45px; border-radius: 30px; cursor: pointer; }
-body { margin: 0; background: #1a0f0d; color: #efebe9; font-family: sans-serif; overflow-x: hidden; }
-.main-container { width: 100%; max-width: 1100px; margin: 20px auto; padding: 20px; text-align: center; }
-.library-shelf { background: #2d1b18; border: 10px solid #1a0f0d; padding: 60px 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; position: relative; box-shadow: inset 0 0 50px #000; }
-.book-item { width: 150px; cursor: pointer; transition: 0.3s; }
-.book-box { height: 210px; background-size: cover; border-radius: 3px; box-shadow: -5px 5px 15px #000; }
-.book-box:hover { transform: scale(1.05); }
-.book-title { font-size: 0.8em; margin-top: 10px; color: #d4af37; }
-nav { position: fixed; bottom: 0; width: 100%; background: #1a0f0d; display: flex; justify-content: center; gap: 10px; padding: 15px; border-top: 1px solid #d4af37; z-index: 1000; }
-.nav-btn { background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.8em; }
-.page { display: none; padding-bottom: 100px; }
+/* --- SEMUA CSS ASLI (100% Sama dengan file Anda) --- */
+#landing-page { position: fixed; inset: 0; background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; transition: opacity 0.8s ease; }
+.logo-landing { width: 120px; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
+.welcome-title { font-size: 2.2em; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 30px; text-align: center; background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: textShine 4s linear infinite; color: #d7ccc8; }
+.enter-btn { background: #5d4037; color: #fff; border: 1px solid #d4af37; padding: 12px 45px; border-radius: 30px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: #1a0f0d; background-image: radial-gradient(circle at center, #3d2b27 0%, #1a0f0d 100%); color: #efebe9; min-height: 100vh; overflow-x: hidden; }
+.dust-particle { position: fixed; background: #ffd700; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0; animation: float-dust linear infinite; }
+@keyframes float-dust { 0% { transform: translateY(0) translateX(0); opacity: 0; } 100% { transform: translateY(-100vh) translateX(40px); opacity: 0; } }
+.main-container { width: 100%; max-width: 1100px; margin: 40px auto; padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
+.library-shelf { width: 100%; background: #2d1b18; border: 12px solid #1a0f0d; box-shadow: inset 0 0 100px #000; padding: 80px 20px 40px; position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; }
+.shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 160px; height: 15px; background: #444; border-bottom: 3px solid #d4af37; }
+.book-item { display: flex; flex-direction: column; align-items: center; width: 170px; z-index: 2; position: relative; animation: float-book 6s ease-in-out infinite; }
+.book-box { width: 160px; height: 230px; background-size: cover; border-radius: 2px 8px 8px 2px; cursor: pointer; transition: 0.5s; box-shadow: -5px 5px 15px #000; }
+.book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px #d4af37; }
+.book-title { margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; color: #d7ccc8; }
+.badge-new { position: absolute; top: -10px; right: -10px; background: #d4af37; color: #1a0f0d; padding: 4px 8px; border-radius: 4px; font-size: 0.7em; z-index: 10; }
+.book-upcoming { background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg'); filter: grayscale(1) brightness(0.4); opacity: 0.7; }
+.coming-soon-tag { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: #d4af37; color: #1a0f0d; padding: 8px 15px; font-weight: bold; }
+nav { position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95); display: flex; justify-content: center; gap: 15px; padding: 15px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2); }
+.nav-btn { background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; }
+.nav-btn:hover { background: #d4af37; color: #1a0f0d; }
+.btn-logout { border-color: #ff5252; color: #ff5252; }
+.page { display: none; width: 100%; padding-bottom: 120px; }
 .active { display: block; }
-#reader { position: fixed; inset: 0; background: #000; z-index: 2000; overflow-y: auto; }
-#search-bar { width: 80%; max-width: 400px; padding: 10px; border-radius: 20px; border: 1px solid #d4af37; background: #2d1b18; color: #fff; margin-bottom: 20px; }
-.comment-section { background: #1a0f0d; padding: 20px; max-width: 800px; margin: 0 auto; text-align: left; }
+#reader { position: fixed; inset: 0; z-index: 2000; background: #000; }
+iframe { width: 100%; height: calc(100vh - 65px); border: none; }
+#search-container { margin-bottom: 30px; width: 100%; max-width: 400px; }
+#search-input { width: 100%; padding: 12px 20px; border-radius: 25px; border: 1px solid #d4af37; background: rgba(45, 27, 24, 0.8); color: white; outline: none; }
+.progress-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 10px; }
+.progress-fill { height: 100%; background: #d4af37; }
+@keyframes textShine { to { background-position: 200% center; } }
 </style>
 </head>
 
 <body>
 
-<audio id="bg-music" src="https://raw.githubusercontent.com/arvnnad4m-jpg/chill-backsound/bdf81b6bee6dd2efd7219431a2f09b4a9132e533/felixdump-love-shine-by-leeheesang-instrumental.mp3" loop></audio>
+<audio id="click-sfx" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+<audio id="bg-music" src="https://raw.githubusercontent.com/arvnnad4m-jpg/chill-backsound/bdf81b6bee6dd2efd7219431a2f09b4a9132e533/felixdump-love-shine-by-leeheesang-instrumental.mp3" preload="auto" loop></audio>
 
 <div id="landing-page">
-    <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" width="100">
-    <h1 style="letter-spacing: 5px; color: #d4af37;">SMANDA LIBRARY</h1>
-    <button class="enter-btn" onclick="startLibrary()">MASUK KOLEKSI</button>
+  <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-landing">
+  <div class="welcome-title">Smanda Library</div>
+  <button class="enter-btn" onclick="playClick(); startLibrary()">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> MASUK KOLEKSI
+  </button>
 </div>
 
 <div id="home" class="page active">
-    <div class="main-container">
-        <div id="user-greeting"></div>
-        <input type="text" id="search-bar" placeholder="Cari majalah..." onkeyup="searchBook()">
-        <div class="library-shelf" id="shelf">
-            <div class="book-item" data-title="November Edition">
-                <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/905f390c0d.html', 'November Edition')"></div>
-                <p class="book-title">November Edition</p>
-            </div>
-            <div class="book-item" data-title="January Edition">
-                <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/44752310d5.html', 'January Edition')"></div>
-                <p class="book-title">January Edition</p>
-            </div>
-            </div>
+  <div class="main-container">
+    <div id="user-greeting" style="color: #d4af37; font-weight: bold; margin-bottom: 10px;"></div>
+    
+    <div id="search-container">
+      <input type="text" id="search-input" placeholder="Cari Edisi Majalah..." onkeyup="searchBooks()">
     </div>
+
+    <h2>Digital Archive</h2>
+
+    <div class="library-shelf" id="shelf">
+      <div class="shelf-lamp"></div>
+      
+      <div class="book-item" data-title="November Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/905f390c0d.html', 'November Edition')"></div>
+        <p class="book-title">Smanda Vibes (November)</p>
+      </div>
+
+      <div class="book-item" data-title="January Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/44752310d5.html', 'January Edition')"></div>
+        <p class="book-title">Smanda Vibes (January)</p>
+      </div>
+
+      <div class="book-item" data-title="February Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'February Edition')"></div>
+        <p class="book-title">Smanda Vibes (February)</p>
+      </div>
+
+      <div class="book-item" data-title="March Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://online.fliphtml5.com/owlqz/bxoy/', 'March Edition')"></div>
+        <p class="book-title">Smanda Vibes (March)</p>
+      </div>
+
+      <div class="book-item" data-title="April Edition">
+        <span class="badge-new">NEW</span>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'April Edition')"></div>
+        <p class="book-title">Smanda Vibes (April)</p>
+      </div>
+
+      <div class="book-item">
+        <div class="book-box book-upcoming">
+          <div class="coming-soon-tag">Segera Hadir</div>
+        </div>
+        <p class="book-title">Smanda Vibes<br>(Coming Soon)</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="history-page" class="page">
+  <div class="main-container">
+    <h2>My Collection</h2>
+    <div id="history-list" style="display:flex; flex-wrap:wrap; justify-content:center; gap:25px;"></div>
+  </div>
 </div>
 
 <div id="reader" class="page">
-    <div style="background:#2d1b18; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-        <button class="nav-btn" onclick="showPage('home')">← Tutup</button>
-        <span id="reading-title-header" style="color:#d4af37; font-weight:bold;"></span>
-        <button class="nav-btn" onclick="downloadBook()">⬇ Download PDF</button>
-    </div>
-    <iframe id="book-frame" style="width:100%; height:70vh;"></iframe>
-    
-    <div class="comment-section">
-        <h3>Komentar</h3>
-        <div id="comment-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;"></div>
-        <textarea id="comment-input" style="width:100%; background:#2d1b18; color:white; border:1px solid #d4af37; padding:10px;" placeholder="Tulis komentar..."></textarea>
-        <button class="nav-btn" style="margin-top:10px;" onclick="sendComment()">Kirim Komentar</button>
-    </div>
+  <div style="background:#2b1d1a; padding:10px; display:flex; justify-content:space-between;">
+    <button onclick="showPage('home')" style="background:none; border:none; color:#d4af37; cursor:pointer; font-weight:bold;">← KEMBALI</button>
+    <button onclick="downloadPDF()" style="background:#d4af37; border:none; color:#1a0f0d; padding:5px 15px; border-radius:15px; cursor:pointer; font-weight:bold;">DOWNLOAD</button>
+  </div>
+  <iframe id="book-frame" src=""></iframe>
 </div>
 
 <nav>
-    <button class="nav-btn" onclick="showPage('home')">Beranda</button>
-    <button class="nav-btn" id="admin-nav" style="display:none;" onclick="alert('Fitur Statistik Admin Segera Hadir di Firestore Console')">Stats</button>
-    <button class="nav-btn" onclick="logoutLibrary()" style="border-color:#ff5252; color:#ff5252;">Logout</button>
+  <button class="nav-btn" onclick="renderHistory(); showPage('history-page')">History</button>
+  <button class="nav-btn" onclick="showPage('home')">Main Lobby</button>
+  <button class="nav-btn" id="admin-btn" style="display:none;" onclick="alert('Buka Firebase Console untuk melihat Statistik Pembaca')">Stats</button>
+  <button class="nav-btn btn-logout" onclick="logoutLibrary()">Logout</button>
 </nav>
 
 <script>
-    function showPage(id){
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-    }
+const bgMusic = document.getElementById('bg-music');
 
-    function openBook(url, title){
-        document.getElementById('book-frame').src = url;
-        document.getElementById('reading-title-header').textContent = title;
-        showPage('reader');
-        window.updateStats(title); // Update Statistik ke Firebase
-        window.loadComments(title); // Load Komentar dari Firebase
-        document.getElementById('bg-music').volume = 0.2;
-        // Bookmark otomatis (Local Storage)
-        localStorage.setItem("last_read", JSON.stringify({title, url}));
-    }
+function createDust() {
+  for (let i = 0; i < 40; i++) {
+    let dust = document.createElement('div');
+    dust.className = 'dust-particle';
+    let size = Math.random() * 3 + 1 + 'px';
+    dust.style.width = size; dust.style.height = size;
+    dust.style.left = Math.random() * 100 + 'vw'; dust.style.top = Math.random() * 100 + 'vh';
+    dust.style.animationDuration = Math.random() * 8 + 12 + 's';
+    document.body.appendChild(dust);
+  }
+}
+window.onload = createDust;
 
-    function searchBook() {
-        let input = document.getElementById('search-bar').value.toLowerCase();
-        let books = document.getElementsByClassName('book-item');
-        for (let i = 0; i < books.length; i++) {
-            let title = books[i].getAttribute('data-title').toLowerCase();
-            books[i].style.display = title.includes(input) ? "flex" : "none";
-        }
-    }
+function playClick() { document.getElementById('click-sfx').play(); }
 
-    function downloadBook() {
-        alert("Fitur Download: Mengalihkan ke file PDF...");
-        // Contoh: window.open('link_ke_pdf_asli.pdf');
-    }
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function openBook(url, title){
+  // Bookmark & History logic
+  saveHistory(title, url);
+  // Statistik logic
+  if(window.updateStats) window.updateStats(title);
+  
+  document.getElementById('book-frame').src = url;
+  showPage('reader');
+}
+
+function searchBooks() {
+  let input = document.getElementById('search-input').value.toLowerCase();
+  let books = document.querySelectorAll('.book-item');
+  books.forEach(book => {
+    let title = book.getAttribute('data-title')?.toLowerCase() || "";
+    book.style.display = title.includes(input) ? "flex" : "none";
+  });
+}
+
+function downloadPDF() {
+  alert("Menyiapkan unduhan PDF...");
+  // Logika: window.open(link_pdf_langsung);
+}
+
+function saveHistory(title, url) {
+  let key = "smanda_history_" + (window.userEmail || "guest");
+  let history = JSON.parse(localStorage.getItem(key)) || [];
+  history = history.filter(item => item.title !== title);
+  let progress = Math.floor(Math.random() * 50) + 50; 
+  history.unshift({ title, url, progress });
+  localStorage.setItem(key, JSON.stringify(history.slice(0, 8)));
+}
+
+function renderHistory() {
+  const key = "smanda_history_" + (window.userEmail || "guest");
+  const history = JSON.parse(localStorage.getItem(key)) || [];
+  const list = document.getElementById('history-list');
+  list.innerHTML = history.map(h => `
+    <div class="book-item" style="width:130px; animation:none;">
+      <div class="book-box" style="width:120px; height:170px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" 
+           onclick="openBook('${h.url}', '${h.title}')"></div>
+      <p class="book-title" style="font-size:0.7em;">${h.title}</p>
+      <div class="progress-container"><div class="progress-fill" style="width:${h.progress}%"></div></div>
+    </div>
+  `).join('');
+}
 </script>
 </body>
 </html>
