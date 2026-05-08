@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smanda's Elegant Library</title>
+<title>Smanda's Elegant Library - Pro Edition</title>
 
 <script type="module">
+  // --- 1. FIREBASE SETUP ---
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -41,8 +42,11 @@
       window.userEmail = user.email;
       window.userName = user.displayName;
       if(user.email === ADMIN_EMAIL) {
+        document.getElementById('user-greeting').textContent = "Halo, Admin!";
         document.getElementById('admin-nav-btn').style.display = 'flex';
         listenToUserLogs();
+      } else {
+        document.getElementById('user-greeting').textContent = "Halo, " + user.displayName + "!";
       }
       const lp = document.getElementById('landing-page');
       lp.style.opacity = '0';
@@ -54,8 +58,12 @@
   window.logToFirebase = function(bookTitle) {
     if (!window.userEmail) return;
     const safeEmail = window.userEmail.replace(/\./g, ',');
-    set(ref(db, 'logs/' + safeEmail), {
-      name: window.userName, email: window.userEmail, lastRead: bookTitle, time: new Date().toLocaleString('id-ID')
+    const userRef = ref(db, 'logs/' + safeEmail);
+    set(userRef, {
+      name: window.userName,
+      email: window.userEmail,
+      lastRead: bookTitle,
+      time: new Date().toLocaleString('id-ID')
     });
   };
 
@@ -78,37 +86,14 @@
 </script>
 
 <style>
-/* --- SEMUA CSS ASLI DARI FILE MANDALA.HTML --- */
-#landing-page {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  z-index: 1000; transition: opacity 0.8s ease;
-}
-.logo-landing { width: 120px; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
-
-/* LOGIN GOOGLE STYLE */
-.google-btn {
-  display: flex; align-items: center; gap: 12px; background: white; color: #333; 
-  border: none; padding: 2px 20px 2px 2px; border-radius: 5px; font-weight: 600; 
-  cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-}
-.google-icon-wrapper { background: white; padding: 10px; border-radius: 3px; display: flex; align-items: center; }
-
-.welcome-title {
-  font-size: 2.2em; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 30px; text-align: center;
-  background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%);
-  background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; animation: textShine 4s linear infinite;
-}
-@keyframes textShine { to { background-position: 200% center; } }
-
+/* --- BASE & ANIMATIONS (From File 1) --- */
 body {
   margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
   background: #1a0f0d; background-image: radial-gradient(circle at center, #3d2b27 0%, #1a0f0d 100%);
-  color: #efebe9; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
+  color: #efebe9; min-height: 100vh; overflow-x: hidden;
 }
 
+/* Partikel Debu */
 .dust-particle {
   position: fixed; background: #ffd700; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0;
   box-shadow: 0 0 5px #ffd700; animation: float-dust linear infinite;
@@ -119,40 +104,59 @@ body {
   100% { transform: translateY(-100vh) translateX(40px); opacity: 0; }
 }
 
-.main-container { width: 100%; max-width: 1100px; margin: 40px auto; padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
-.logo-main { width: 80px; margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.2)); }
-
-.library-shelf {
-  width: 100%; background: #2d1b18; border: 12px solid #1a0f0d;
-  box-shadow: inset 0 0 100px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6);
-  padding: 80px 20px 40px 20px; position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; border-radius: 4px; box-sizing: border-box;
+/* Teks Berkilap */
+@keyframes textShine { to { background-position: 200% center; } }
+.shine-text {
+  background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%);
+  background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; animation: textShine 4s linear infinite;
 }
 
-.shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 160px; height: 15px; background: linear-gradient(to bottom, #444, #222); border-bottom: 3px solid #d4af37; border-radius: 8px 8px 0 0; z-index: 10; }
-.lamp-glow { position: absolute; top: 7px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; height: 350px; background: radial-gradient(ellipse at top, rgba(212, 175, 55, 0.15) 0%, transparent 75%); pointer-events: none; }
+/* Landing Page */
+#landing-page {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
+  display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: 0.8s;
+}
 
-.book-item { display: flex; flex-direction: column; align-items: center; width: 170px; z-index: 2; margin-bottom: 20px; position: relative; }
+/* Library Shelf */
+.library-shelf {
+  background: #2d1b18; border: 12px solid #1a0f0d; border-radius: 4px;
+  padding: 80px 20px 40px 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 30px;
+  box-shadow: inset 0 0 100px #000, 0 20px 40px rgba(0,0,0,0.5); position: relative; width: 100%; max-width: 1000px;
+}
+.shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 160px; height: 15px; background: #222; border-bottom: 3px solid #d4af37; box-shadow: 0 5px 20px rgba(212, 175, 55, 0.3); }
+
+/* Book Items & Floating */
+.book-item { width: 160px; text-align: center; transition: 0.5s; animation: float-book 6s ease-in-out infinite; position: relative; z-index: 2; }
+.book-item:nth-child(even) { animation-delay: 2s; }
+@keyframes float-book { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
 .book-box {
-  width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px;
-  cursor: pointer; position: relative; transition: all 0.5s; box-shadow: -5px 5px 15px rgba(0,0,0,0.5);
+  width: 100%; height: 230px; background-size: cover; border-radius: 2px 8px 8px 2px;
+  cursor: pointer; box-shadow: -5px 5px 15px rgba(0,0,0,0.5); transition: 0.5s;
   -webkit-box-reflect: below 2px linear-gradient(transparent, transparent 70%, rgba(255,255,255,0.1));
 }
-.book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
+.book-box:hover { transform: scale(1.05) rotate(1deg); box-shadow: 0 0 30px #d4af37; }
 
-.book-title { margin-top: 15px; font-weight: bold; font-size: 0.9em; text-align: center; color: #d7ccc8; }
+/* Dashboard & Admin */
+.admin-card { background: rgba(0,0,0,0.4); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 10px; padding: 20px; backdrop-filter: blur(10px); }
+table { width: 100%; border-collapse: collapse; }
+th { color: #d4af37; border-bottom: 1px solid #d4af37; padding: 10px; font-size: 0.8em; }
+td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-.badge-new { position: absolute; top: -10px; right: -10px; background: #d4af37; color: #1a0f0d; padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; box-shadow: 0 0 15px #d4af37; z-index: 10; }
-.book-tooltip { position: absolute; bottom: 100%; background: rgba(43, 29, 26, 0.95); color: #d7ccc8; padding: 10px; border-radius: 5px; border: 1px solid #d4af37; font-size: 0.75em; width: 180px; text-align: center; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 50; pointer-events: none; }
-.book-item:hover .book-tooltip { opacity: 1; visibility: visible; transform: translateY(-10px); }
-
+/* Navigation */
 nav {
   position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95);
-  display: flex; justify-content: center; gap: 15px; padding: 15px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2);
+  display: flex; justify-content: center; gap: 10px; padding: 15px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2); backdrop-filter: blur(5px);
 }
 .nav-btn {
-  background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 8px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; font-size: 0.8em; display: flex; align-items: center; gap: 8px;
+  background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 8px;
 }
-.page { display: none; width: 100%; padding-bottom: 120px; }
+.nav-btn:hover { background: #d4af37; color: #1a0f0d; }
+
+.page { display: none; width: 100%; padding-bottom: 120px; animation: fadeIn 0.5s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .active { display: block; }
 #reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; }
 iframe { width: 100%; height: calc(100vh - 65px); border: none; }
@@ -160,82 +164,70 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 </head>
 <body>
 
-<audio id="click-sfx" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"></audio>
 <audio id="bg-music" src="https://raw.githubusercontent.com/arvnnad4m-jpg/chill-backsound/bdf81b6bee6dd2efd7219431a2f09b4a9132e533/felixdump-love-shine-by-leeheesang-instrumental.mp3" loop></audio>
 
 <div id="landing-page">
-  <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-landing">
-  <div class="welcome-title">Smanda Library</div>
-  
-  <button class="google-btn" onclick="playClick(); startLibrary()">
-    <div class="google-icon-wrapper">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Logo.svg" width="20">
-    </div>
-    <span>Login with Google</span>
-  </button>
+  <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" width="120" style="filter: drop-shadow(0 0 15px #d4af37);">
+  <h1 class="welcome-title shine-text" style="letter-spacing: 5px;">Smanda Library</h1>
+  <button onclick="startLibrary()" style="padding: 15px 50px; cursor: pointer; background: #d4af37; border: none; border-radius: 30px; font-weight: bold; letter-spacing: 2px; box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);">LOGIN GOOGLE</button>
 </div>
 
 <div id="home" class="page active">
-  <div class="main-container">
-    <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-main">
-    <h2 style="letter-spacing: 8px; margin-bottom: 40px; font-weight: 300; text-transform: uppercase;">Digital Archive</h2>
+  <div style="display: flex; flex-direction: column; align-items: center; padding-top: 40px;">
+    <div id="user-greeting" class="shine-text" style="font-weight: bold; margin-bottom: 10px;"></div>
+    <h2 class="shine-text" style="letter-spacing: 12px; font-weight: 300;">DIGITAL ARCHIVE</h2>
+    
+    <div style="margin: 20px 0; width: 90%; max-width: 400px;">
+      <input type="text" id="search-bar" placeholder="Cari edisi..." onkeyup="filterBooks()" 
+             style="width:100%; padding: 12px; border-radius: 25px; border: 1px solid #d4af37; background: rgba(0,0,0,0.3); color: white; text-align: center; outline: none;">
+    </div>
 
     <div class="library-shelf">
       <div class="shelf-lamp"></div>
-      <div class="lamp-glow"></div>
       
-      <div class="book-item">
-        <div class="book-tooltip">Edisi perdana yang penuh semangat kebersamaan.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/905f390c0d.html', 'Smanda Vibes (November)')"></div>
-        <p class="book-title">Smanda Vibes<br>(November Edition)</p>
+      <div class="book-item" data-title="November Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/905f390c0d.html', 'November Edition')"></div>
+        <p class="book-title shine-text">November Edition</p>
       </div>
 
-      <div class="book-item">
-        <div class="book-tooltip">Awal tahun baru dengan cerita-cerita segar dari sekolah.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/44752310d5.html', 'Smanda Vibes (January)')"></div>
-        <p class="book-title">Smanda Vibes<br>(January Edition)</p>
+      <div class="book-item" data-title="January Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/44752310d5.html', 'January Edition')"></div>
+        <p class="book-title shine-text">January Edition</p>
       </div>
 
-      <div class="book-item">
-        <div class="book-tooltip">Merayakan momen kasih sayang dan prestasi siswa.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'Smanda Vibes (February)')"></div>
-        <p class="book-title">Smanda Vibes<br>(February Edition)</p>
+      <div class="book-item" data-title="February Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'February Edition')"></div>
+        <p class="book-title shine-text">February Edition</p>
+      </div>
+      
+      <div class="book-item" data-title="March Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://online.fliphtml5.com/owlqz/bxoy/', 'March Edition')"></div>
+        <p class="book-title shine-text">March Edition</p>
       </div>
 
-      <div class="book-item">
-        <div class="book-tooltip">Edisi spesial Maret dengan liputan acara besar sekolah.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://online.fliphtml5.com/owlqz/bxoy/', 'Smanda Vibes (March)')"></div>
-        <p class="book-title">Smanda Vibes<br>(March Edition)</p>
-      </div>
-
-      <div class="book-item">
-        <span class="badge-new">NEW</span>
-        <div class="book-tooltip">Edisi April: Menilik kreativitas tanpa batas.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'Smanda Vibes (April)')"></div>
-        <p class="book-title">Smanda Vibes<br>(April Edition)</p>
-      </div>
-
-      <div class="book-item">
-        <div class="book-tooltip">Edisi terbaru sedang dalam proses penyusunan.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg'); opacity: 0.3;">
-          <div style="position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#d4af37; font-weight:bold; font-size:0.7em; text-align:center;">COMING<br>SOON</div>
-        </div>
-        <p class="book-title" style="opacity:0.5;">Next Edition</p>
+      <div class="book-item" data-title="April Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/1caa336792.html', 'April Edition')"></div>
+        <p class="book-title shine-text">April Edition</p>
       </div>
     </div>
   </div>
 </div>
 
 <div id="history-page" class="page">
-  <div class="main-container"><h2 class="welcome-title">History</h2><div id="history-list" style="display:flex; flex-wrap:wrap; gap:30px; justify-content:center;"></div></div>
+  <div style="display: flex; flex-direction: column; align-items: center; padding-top: 40px;">
+    <h2 class="shine-text" style="letter-spacing: 10px;">HISTORY</h2>
+    <div id="history-list" style="display:flex; flex-wrap:wrap; gap:30px; justify-content:center; padding: 20px;"></div>
+  </div>
 </div>
 
 <div id="admin-page" class="page">
-  <div class="main-container">
-    <h2 class="welcome-title">Admin Logs</h2>
-    <div style="width:100%; max-width:900px; background:rgba(0,0,0,0.3); padding:20px; border-radius:10px; border:1px solid rgba(212,175,55,0.2);">
-      <table style="width:100%; border-collapse:collapse; text-align:left;">
-        <thead><tr style="color:#d4af37; border-bottom:1px solid #d4af37;"><th style="padding:10px;">User</th><th style="padding:10px;">Email</th><th style="padding:10px;">Reading</th><th style="padding:10px;">Time</th></tr></thead>
+  <div style="display: flex; flex-direction: column; align-items: center; padding: 40px 20px;">
+    <h2 class="shine-text">ADMIN LOGS</h2>
+    <div class="admin-card">
+      <table>
+        <thead>
+          <tr><th>USER</th><th>EMAIL</th><th>READING</th><th>WAKTU</th></tr>
+        </thead>
         <tbody id="admin-log-body"></tbody>
       </table>
     </div>
@@ -243,51 +235,82 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 </div>
 
 <div id="reader" class="page">
-  <button class="nav-btn" style="width:100%; border-radius:0; justify-content:center;" onclick="playClick(); showPage('home')">← KEMBALI KE RAK</button>
+  <button onclick="showPage('home')" style="width:100%; padding:20px; background:#222; color:#d4af37; border:none; cursor:pointer; font-weight:bold; letter-spacing: 2px;">← KEMBALI KE PERPUSTAKAAN</button>
   <iframe id="book-frame" src=""></iframe>
 </div>
 
 <nav>
-  <button class="nav-btn" onclick="playClick(); showPage('home')">Lobby</button>
-  <button class="nav-btn" onclick="playClick(); renderHistory(); showPage('history-page')">History</button>
-  <button class="nav-btn" id="admin-nav-btn" style="display:none;" onclick="playClick(); showPage('admin-page')">Admin</button>
-  <button class="nav-btn" onclick="playClick(); toggleMusic()">Music</button>
+  <button class="nav-btn" onclick="showPage('home')">Lobby</button>
+  <button class="nav-btn" onclick="renderHistory(); showPage('history-page')">History</button>
+  <button class="nav-btn" id="admin-nav-btn" style="display:none;" onclick="showPage('admin-page')">Admin</button>
+  <button class="nav-btn" id="music-btn" onclick="toggleMusic()">
+    <span id="music-text">Music</span>
+    <div class="equalizer" style="display: flex; align-items: flex-end; gap: 2px; height: 15px;">
+      <div class="eq-bar" style="width: 3px; background: #d4af37;"></div>
+      <div class="eq-bar" style="width: 3px; background: #d4af37;"></div>
+      <div class="eq-bar" style="width: 3px; background: #d4af37;"></div>
+    </div>
+  </button>
   <button class="nav-btn" onclick="logoutLibrary()" style="color:#ff5252; border-color:#ff5252;">Logout</button>
 </nav>
 
 <script>
-// --- SEMUA JS ASLI ---
+// --- Vfx: Dust Particles ---
 function createDust() {
-  for (let i = 0; i < 35; i++) {
+  const container = document.body;
+  for (let i = 0; i < 30; i++) {
     let dust = document.createElement('div');
     dust.className = 'dust-particle';
     let size = Math.random() * 3 + 1 + 'px';
     dust.style.width = size; dust.style.height = size;
     dust.style.left = Math.random() * 100 + 'vw'; dust.style.top = Math.random() * 100 + 'vh';
-    dust.style.animationDuration = Math.random() * 8 + 12 + 's';
-    document.body.appendChild(dust);
+    dust.style.animationDuration = Math.random() * 8 + 10 + 's';
+    dust.style.animationDelay = Math.random() * 5 + 's';
+    container.appendChild(dust);
   }
 }
 window.onload = createDust;
 
-function playClick() { const sfx = document.getElementById('click-sfx'); sfx.currentTime = 0; sfx.play(); }
+const bgMusic = document.getElementById('bg-music');
+const eqBars = document.querySelectorAll('.eq-bar');
 
-function showPage(id){
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if(id === 'home') document.getElementById('book-frame').src = "";
+function toggleMusic() {
+  if(bgMusic.paused) {
+    bgMusic.play();
+    document.getElementById('music-text').textContent = "Pause";
+    eqBars.forEach(b => b.style.animation = 'eq 0.5s infinite alternate');
+  } else {
+    bgMusic.pause();
+    document.getElementById('music-text').textContent = "Music";
+    eqBars.forEach(b => b.style.animation = 'none');
+  }
 }
 
-function openBook(url, title){
+function filterBooks() {
+  const q = document.getElementById('search-bar').value.toLowerCase();
+  document.querySelectorAll('.book-item').forEach(b => {
+    const title = b.getAttribute('data-title').toLowerCase();
+    b.style.display = title.includes(q) ? 'block' : 'none';
+  });
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id === 'reader') {
+    bgMusic.volume = 0.2;
+  } else {
+    document.getElementById('book-frame').src = "";
+    bgMusic.volume = 1.0;
+  }
+  window.scrollTo(0,0);
+}
+
+function openBook(url, title) {
   document.getElementById('book-frame').src = url;
   showPage('reader');
   saveToLocalHistory(title, url);
   if(window.logToFirebase) window.logToFirebase(title);
-}
-
-const bgMusic = document.getElementById('bg-music');
-function toggleMusic() {
-  if (bgMusic.paused) bgMusic.play(); else bgMusic.pause();
 }
 
 function saveToLocalHistory(title, url) {
@@ -303,7 +326,7 @@ function renderHistory() {
   list.innerHTML = h.map(x => `
     <div class="book-item">
       <div class="book-box" style="height:150px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('${x.url}', '${x.title}')"></div>
-      <p class="book-title" style="font-size:0.7em;">${x.title}</p>
+      <p style="font-size:0.7em;" class="shine-text">${x.title}<br><span style="opacity:0.5">${x.time}</span></p>
     </div>
   `).join('');
 }
