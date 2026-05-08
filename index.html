@@ -206,16 +206,31 @@ body {
 .book-tooltip { position: absolute; bottom: 100%; background: rgba(43, 29, 26, 0.95); color: #d7ccc8; padding: 10px; border-radius: 5px; border: 1px solid #d4af37; font-size: 0.75em; width: 180px; text-align: center; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 50; pointer-events: none; }
 .book-item:hover .book-tooltip { opacity: 1; visibility: visible; transform: translateY(-10px); }
 
-/* --- COMING SOON DECORATION --- */
+/* --- COMING SOON DECORATION (BARU) --- */
 .book-locked { 
-    filter: grayscale(1) brightness(0.3) blur(1px); 
+    filter: grayscale(1) brightness(0.2) blur(1.5px); 
     cursor: not-allowed !important; 
-    border: 1px solid rgba(212, 175, 55, 0.3);
+    border: 2px solid rgba(212, 175, 55, 0.2);
 }
+
+/* Palang Coming Soon */
 .book-locked::after {
-    content: "🔒"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    font-size: 3rem; opacity: 0.8; filter: drop-shadow(0 0 10px #d4af37);
+    content: "COMING SOON"; 
+    position: absolute; top: 50%; left: -10%; 
+    width: 120%;
+    transform: translateY(-50%) rotate(-20deg);
+    background: #d4af37;
+    color: #1a0f0d;
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 8px 0;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    letter-spacing: 1px;
+    z-index: 5;
+    opacity: 0.9;
 }
+
 .badge-soon { 
     background: linear-gradient(45deg, #2c3e50, #000) !important; 
     color: #d4af37 !important; border: 1px solid #d4af37;
@@ -303,9 +318,9 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 
       <div class="book-item">
         <span class="badge-new badge-soon">MISTERI</span>
-        <div class="book-tooltip">Sedang dalam proses penyuntingan tingkat tinggi. Tunggu kejutan kami!</div>
+        <div class="book-tooltip">Edisi Mei sedang dalam proses. Tunggu tanggal mainnya!</div>
         <div class="book-box book-locked" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');"></div>
-        <p class="book-title" style="opacity:0.6; font-style: italic;">Next Edition<br>(May 2026)</p>
+        <p class="book-title" style="opacity:0.5;">Smanda Vibes<br>(May Edition)</p>
       </div>
 
     </div>
