@@ -27,19 +27,19 @@
   const provider = new GoogleAuthProvider();
   
   // DAFTAR ADMIN
-  const ADMIN_EMAILS = ["arvnn.ad4m@gmail.com", "admin2@gmail.com", "kicawmania@gmail.com"]; 
+  const ADMIN_EMAILS = ["arvnn.ad4m@gmail.com", "admin2@gmail.com"]; 
 
   window.startLibrary = function() {
-    signInWithPopup(auth, provider).catch((err) => alert("Login gagal: " + err.message));
+    // Menghapus alert pada login Google
+    signInWithPopup(auth, provider).catch((err) => console.error("Login gagal:", err.message));
   };
 
   window.loginEmail = function() {
     const email = document.getElementById('email-input').value;
     const pass = document.getElementById('pass-input').value;
     if(email && pass) {
-      signInWithEmailAndPassword(auth, email, pass).catch((err) => alert("Error: " + err.message));
-    } else {
-      alert("Isi email dan password!");
+      // Menghapus alert pada login Email
+      signInWithEmailAndPassword(auth, email, pass).catch((err) => console.error("Error:", err.message));
     }
   };
 
@@ -47,7 +47,8 @@
     const email = document.getElementById('email-input').value;
     const pass = document.getElementById('pass-input').value;
     if(email && pass) {
-      createUserWithEmailAndPassword(auth, email, pass).catch((err) => alert("Error: " + err.message));
+      // Menghapus alert pada pendaftaran
+      createUserWithEmailAndPassword(auth, email, pass).catch((err) => console.error("Error:", err.message));
     }
   };
 
@@ -160,7 +161,6 @@
 </script>
 
 <style>
-/* --- STYLE ASLI --- */
 #landing-page {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
@@ -272,7 +272,6 @@ table { width: 100%; border-collapse: collapse; }
 th { text-align: left; padding: 12px; border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em; }
 td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9em; }
 
-/* --- PERUBAHAN NAVIGASI: EFEK HOVER --- */
 nav {
   position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95); backdrop-filter: blur(8px);
   display: flex; justify-content: center; gap: 15px; padding: 20px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2);
