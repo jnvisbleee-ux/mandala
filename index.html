@@ -26,7 +26,7 @@
   const db = getDatabase(app);
   const provider = new GoogleAuthProvider();
   
-  // DAFTAR ADMIN (Tambahkan email admin di sini)
+  // DAFTAR ADMIN
   const ADMIN_EMAILS = ["arvnn.ad4m@gmail.com", "admin2@gmail.com"]; 
 
   window.startLibrary = function() {
@@ -62,7 +62,6 @@
       window.userEmail = user.email;
       window.userName = user.displayName || user.email.split('@')[0];
       
-      // CEK APAKAH USER ADALAH ADMIN
       if(ADMIN_EMAILS.includes(user.email)) {
         document.getElementById('admin-nav-btn').style.display = 'flex';
         document.getElementById('admin-upload-section').style.display = 'block';
@@ -85,9 +84,12 @@
       const manageBody = document.getElementById('admin-manage-body');
       
       if (data) {
-        container.innerHTML = Object.entries(data).map(([key, book]) => `
+        const bookEntries = Object.entries(data);
+        const lastIndex = bookEntries.length - 1;
+
+        container.innerHTML = bookEntries.map(([key, book], index) => `
           <div class="book-item">
-            <span class="badge-new">NEW</span>
+            ${index === lastIndex ? '<span class="badge-new">NEW</span>' : ''}
             <div class="book-tooltip">${book.desc}</div>
             <div class="book-box" style="background-image: url('${book.cover}');" onclick="playClick(); openBook('${book.url}', '${book.title}')"></div>
             <p class="book-title">${book.title}</p>
@@ -95,7 +97,7 @@
         `).join('');
 
         if(manageBody) {
-            manageBody.innerHTML = Object.entries(data).map(([key, book]) => `
+            manageBody.innerHTML = bookEntries.map(([key, book]) => `
             <tr>
                 <td>${book.title}</td>
                 <td><button onclick="deleteBook('${key}')" style="background:#ff5252; border:none; color:white; padding:5px 10px; border-radius:4px; cursor:pointer;">Hapus</button></td>
@@ -270,15 +272,22 @@ table { width: 100%; border-collapse: collapse; }
 th { text-align: left; padding: 12px; border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em; }
 td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9em; }
 
+/* --- PERUBAHAN NAVIGASI: EFEK HOVER --- */
 nav {
   position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95); backdrop-filter: blur(8px);
   display: flex; justify-content: center; gap: 15px; padding: 20px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
 .nav-btn {
-  background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 0.8em; display: flex; align-items: center; gap: 10px;
+  background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 0.8em; display: flex; align-items: center; gap: 10px;
 }
+.nav-btn:hover {
+  background: #d4af37; color: #1a0f0d; transform: translateY(-5px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+}
+.nav-btn:active { transform: translateY(0); }
+.nav-btn:hover .eq-bar { background: #1a0f0d; }
+
 .equalizer { display: flex; align-items: flex-end; gap: 3px; height: 18px; width: 22px; }
-.eq-bar { width: 4px; background: #fff59d; animation: eq-anim 0.5s ease-in-out infinite alternate; animation-play-state: paused; }
+.eq-bar { width: 4px; background: #fff59d; animation: eq-anim 0.5s ease-in-out infinite alternate; animation-play-state: paused; transition: background 0.3s; }
 @keyframes eq-anim { 0% { height: 4px; } 100% { height: 18px; } }
 
 .page { display: none; width: 100%; padding-bottom: 120px; }
@@ -345,7 +354,6 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
       </div>
 
       <div class="book-item">
-        <span class="badge-new">NEW</span>
         <div class="book-tooltip">Edisi April: Menilik kreativitas tanpa batas di tengah bulan suci.</div>
         <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'Smanda Vibes (April)')"></div>
         <p class="book-title">Smanda Vibes<br>(April Edition)</p>
