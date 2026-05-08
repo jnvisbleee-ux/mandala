@@ -8,8 +8,6 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  // FITUR DATABASE TAMBAHAN
-  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAsYNPWyoeERQ1tVolEyVIqNf8GSFkhbGY",
@@ -24,7 +22,6 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getDatabase(app); // Hubungkan Database
   const provider = new GoogleAuthProvider();
 
   const ADMIN_EMAIL = "arvnn.ad4m@gmail.com";
@@ -47,14 +44,11 @@
     if (user) {
       window.currentUser = user.displayName;
       window.userEmail = user.email;
+      document.getElementById('user-greeting').textContent = "Halo, " + user.displayName + "!";
       
-      // PERUBAHAN NAMA ADMIN arv1ent
+      // Cek Admin
       if(user.email === ADMIN_EMAIL) {
-        document.getElementById('user-greeting').textContent = "Halo, arv1ent!";
         document.getElementById('admin-nav-btn').style.display = 'flex';
-        listenToUserLogs(); // Jalankan pemantauan admin
-      } else {
-        document.getElementById('user-greeting').textContent = "Halo, " + user.displayName + "!";
       }
 
       const lp = document.getElementById('landing-page');
@@ -64,39 +58,10 @@
       renderHistory();
     }
   });
-
-  // FUNGSI LOG KE FIREBASE
-  window.logToFirebase = function(bookTitle) {
-    if (!window.userEmail) return;
-    const safeEmail = window.userEmail.replace(/\./g, ',');
-    set(ref(db, 'logs/' + safeEmail), {
-      name: window.currentUser,
-      email: window.userEmail,
-      lastRead: bookTitle,
-      time: new Date().toLocaleString('id-ID')
-    });
-  };
-
-  // FUNGSI ADMIN PEMANTAU DATA
-  function listenToUserLogs() {
-    onValue(ref(db, 'logs'), (snapshot) => {
-      const data = snapshot.val();
-      const tbody = document.getElementById('admin-log-body');
-      if (data) {
-        tbody.innerHTML = Object.values(data).map(user => `
-          <tr>
-            <td>${user.name}</td>
-            <td>${user.email}</td>
-            <td style="color:#d4af37; font-weight:bold">${user.lastRead}</td>
-          </tr>
-        `).join('');
-      }
-    });
-  }
 </script>
 
 <style>
-/* --- BASE CSS & ANIMATIONS (Sesuai Rancangan Awalmu) --- */
+/* --- BASE CSS & ANIMATIONS --- */
 #landing-page {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
@@ -112,14 +77,8 @@
   animation: textShine 4s linear infinite; color: #d7ccc8;
 }
 
-/* LOGIN BUTTON BEAUTIFIED */
-.enter-btn { 
-  background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(212, 175, 55, 0.5); 
-  backdrop-filter: blur(10px); padding: 14px 45px; border-radius: 40px; font-weight: bold; 
-  text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: 0.4s; 
-  display: flex; align-items: center; gap: 15px; 
-}
-.enter-btn:hover { background: #d4af37; color: #1a0f0d; box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
+.enter-btn { background: #5d4037; color: #fff; border: 1px solid #d4af37; padding: 12px 45px; border-radius: 30px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
+.enter-btn:hover { background: #d4af37; color: #1a0f0d; box-shadow: 0 0 25px rgba(212, 175, 55, 0.5); }
 
 body {
   margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -128,14 +87,17 @@ body {
 }
 
 .main-container { width: 100%; max-width: 1100px; margin: 40px auto; padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
-.logo-main { width: 80px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.2)); }
+.logo-main { width: 80px; margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.2)); }
 
+/* SEARCH BAR */
 .search-wrapper { margin-bottom: 30px; width: 100%; max-width: 400px; position: relative; }
 .search-input {
   width: 100%; padding: 12px 20px; border-radius: 25px; border: 1px solid rgba(212, 175, 55, 0.4);
   background: rgba(45, 27, 24, 0.8); color: white; outline: none; transition: 0.3s; text-align: center;
 }
+.search-input:focus { border-color: #d4af37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
 
+/* LIBRARY SHELF */
 .library-shelf {
   width: 100%; background: #2d1b18; border: 12px solid #1a0f0d;
   box-shadow: inset 0 0 100px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6);
@@ -145,7 +107,6 @@ body {
 .shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 160px; height: 15px; background: linear-gradient(to bottom, #444, #222); border-bottom: 3px solid #d4af37; border-radius: 8px 8px 0 0; z-index: 10; }
 .lamp-glow { position: absolute; top: 7px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; height: 350px; background: radial-gradient(ellipse at top, rgba(212, 175, 55, 0.15) 0%, transparent 75%); pointer-events: none; }
 
-/* BOOK STYLES */
 .book-item { display: flex; flex-direction: column; align-items: center; width: 170px; z-index: 2; margin-bottom: 20px; position: relative; animation: float-book 6s ease-in-out infinite; transition: 0.5s; }
 @keyframes float-book { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
@@ -155,13 +116,11 @@ body {
 }
 .book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
 
-/* COMING SOON BOOK EFFECT */
-.book-coming-soon { filter: grayscale(1); opacity: 0.7; cursor: not-allowed; }
-.book-coming-soon::after { content: '🔒'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5em; opacity: 0.8; }
+.book-title {
+  margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; line-height: 1.4; color: #d7ccc8;
+}
 
-.book-title { margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; line-height: 1.4; color: #d7ccc8; }
-
-/* ADMIN & TABLE */
+/* ADMIN TABLE */
 .admin-card { background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 15px; width: 100%; padding: 20px; margin-top: 20px; }
 table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
 th { text-align: left; border-bottom: 1px solid #d4af37; padding: 10px; color: #d4af37; }
@@ -199,7 +158,7 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
   <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" alt="Logo" class="logo-landing">
   <div class="welcome-title">Smanda Library</div>
   <button class="enter-btn" onclick="playClick(); startLibrary()">
-    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" style="background:white; border-radius:50%; padding:2px;">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
     Masuk Koleksi
   </button>
 </div>
@@ -227,9 +186,14 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
         <p class="book-title">Smanda Vibes (January)</p>
       </div>
 
-      <div class="book-item" data-title="Coming Soon">
-        <div class="book-box book-coming-soon" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="alert('Sabar ya! Edisi ini sedang dalam proses penyusunan.')"></div>
-        <p class="book-title" style="opacity:0.5">Coming Soon...</p>
+      <div class="book-item" data-title="February Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'February Edition')"></div>
+        <p class="book-title">Smanda Vibes (February)</p>
+      </div>
+
+      <div class="book-item" data-title="March Edition">
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://online.fliphtml5.com/owlqz/bxoy/', 'March Edition')"></div>
+        <p class="book-title">Smanda Vibes (March)</p>
       </div>
 
       <div class="book-item" data-title="April Edition">
@@ -242,25 +206,31 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 
 <div id="history-page" class="page">
   <div class="main-container">
-    <h2 style="letter-spacing: 5px;">HISTORY</h2>
-    <div id="history-list" style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center;"></div>
+    <h2>My History</h2>
+    <div id="history-list" class="history-grid"></div>
   </div>
 </div>
 
 <div id="admin-page" class="page">
   <div class="main-container">
-    <h2 style="color:#d4af37">ADMIN DASHBOARD</h2>
+    <h2>Admin Dashboard</h2>
     <div class="admin-card">
-      <table id="admin-table">
+      <div style="color:#d4af37; font-weight: bold; margin-bottom: 10px;">User Reading Logs</div>
+      <table>
         <thead>
           <tr>
-            <th>Nama User</th>
+            <th>User</th>
             <th>Email</th>
-            <th>Edisi Terakhir</th>
+            <th>Last Read</th>
           </tr>
         </thead>
         <tbody id="admin-log-body">
-          </tbody>
+          <tr>
+            <td>Adam Admin</td>
+            <td>arvnn.ad4m@gmail.com</td>
+            <td>April Edition</td>
+          </tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -286,11 +256,13 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 
 <script>
 const bgMusic = document.getElementById('bg-music');
+const musicBtn = document.getElementById('music-toggle');
 const eqBars = document.querySelectorAll('.eq-bar');
 
 function filterBooks() {
   const query = document.getElementById('search-bar').value.toLowerCase();
-  document.querySelectorAll('.book-item').forEach(book => {
+  const books = document.querySelectorAll('.book-item');
+  books.forEach(book => {
     const title = book.getAttribute('data-title').toLowerCase();
     book.style.display = title.includes(query) ? 'flex' : 'none';
   });
@@ -334,7 +306,6 @@ function openBook(url, title){
   saveHistory(title, url);
   document.getElementById('book-frame').src = url; 
   showPage('reader'); 
-  if(window.logToFirebase) window.logToFirebase(title); // Lapor Firebase
 }
 
 function saveHistory(title, url) {
@@ -342,19 +313,20 @@ function saveHistory(title, url) {
   let history = JSON.parse(localStorage.getItem(key)) || [];
   history = history.filter(item => item.title !== title);
   history.unshift({ title, url, date: new Date().toLocaleDateString() });
-  localStorage.setItem(key, JSON.stringify(history.slice(0, 10)));
+  if (history.length > 10) history.pop();
+  localStorage.setItem(key, JSON.stringify(history));
 }
 
 function renderHistory() {
   const key = "smanda_history_" + (window.userEmail || "guest");
   const history = JSON.parse(localStorage.getItem(key)) || [];
   const list = document.getElementById('history-list');
-  list.innerHTML = history.map(h => `
-    <div class="book-item" style="animation:none; width:140px;">
-      <div class="book-box" style="width:130px; height:180px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('${h.url}', '${h.title}')"></div>
-      <p style="font-size:0.7em; margin-top:10px;">${h.title}<br><span style="opacity:0.5">${h.date}</span></p>
+  list.innerHTML = history.length > 0 ? history.map(h => `
+    <div class="book-item" style="animation:none;">
+      <div class="book-box" style="width:120px; height:170px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('${h.url}', '${h.title}')"></div>
+      <p class="book-title" style="font-size:0.7em;">${h.title}<br><span style="opacity:0.5; font-size:0.8em;">${h.date}</span></p>
     </div>
-  `).join('');
+  `).join('') : '<p style="text-align:center; width:100%; opacity:0.5;">Belum ada riwayat baca.</p>';
 }
 
 function playClick() { const sfx = document.getElementById('click-sfx'); sfx.currentTime = 0; sfx.play(); }
