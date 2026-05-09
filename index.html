@@ -9,7 +9,7 @@
   // --- FIREBASE CORE SYSTEM ---
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getDatabase, ref, set, onValue, push, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getDatabase, ref, set, onValue, push, remove, get, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAsYNPWyoeERQ1tVolEyVIqNf8GSFkhbGY",
@@ -28,19 +28,16 @@
   
   const ADMIN_EMAILS = ["arvnn.ad4m@gmail.com", "admin2@gmail.com", "kicawmania@gmail.com"]; 
 
-  // --- EXPOSE FUNCTIONS TO WINDOW (Agar bisa dipanggil onClick) ---
+  // --- AUTH FUNCTIONS ---
   window.startLibrary = function() {
-    signInWithPopup(auth, provider).catch((err) => alert("Login Google Gagal: " + err.message));
+    signInWithPopup(auth, provider).catch((err) => console.error("Login gagal:", err.message));
   };
 
   window.loginEmail = function() {
     const email = document.getElementById('email-input').value;
     const pass = document.getElementById('pass-input').value;
     if(email && pass) {
-      signInWithEmailAndPassword(auth, email, pass)
-        .catch((err) => alert("Login Gagal: Periksa Email/Password anda"));
-    } else {
-      alert("Isi email dan password dulu ya");
+      signInWithEmailAndPassword(auth, email, pass).catch((err) => console.error("Error:", err.message));
     }
   };
 
@@ -48,9 +45,7 @@
     const email = document.getElementById('email-input').value;
     const pass = document.getElementById('pass-input').value;
     if(email && pass) {
-      createUserWithEmailAndPassword(auth, email, pass)
-        .then(() => alert("Akun berhasil dibuat! Silakan login."))
-        .catch((err) => alert("Gagal Daftar: " + err.message));
+      createUserWithEmailAndPassword(auth, email, pass).catch((err) => console.error("Error:", err.message));
     }
   };
 
@@ -60,34 +55,27 @@
     }
   };
 
-  // --- SESSION CHECKER ---
   onAuthStateChanged(auth, (user) => {
     if (user) {
       window.userEmail = user.email;
       window.userName = user.displayName || user.email.split('@')[0];
       
-      // Admin Check
       if(ADMIN_EMAILS.includes(user.email)) {
-        const adminBtn = document.getElementById('admin-nav-btn');
-        const adminUpload = document.getElementById('admin-upload-section');
-        if(adminBtn) adminBtn.style.display = 'flex';
-        if(adminUpload) adminUpload.style.display = 'block';
+        document.getElementById('admin-nav-btn').style.display = 'flex';
+        document.getElementById('admin-upload-section').style.display = 'block';
+        document.getElementById('admin-manage-section').style.display = 'block';
         listenToUserLogs();
       }
 
-      // Hide Landing Page
       const lp = document.getElementById('landing-page');
-      if(lp) {
-        lp.style.opacity = '0';
-        setTimeout(() => { lp.style.display = 'none'; }, 800);
-      }
-      
+      lp.style.opacity = '0';
+      setTimeout(() => { lp.style.display = 'none'; }, 800);
       renderHistory(); 
       listenToNewBooks();
     }
   });
 
-  // --- DATA LOGIC ---
+  // --- CORE LIBRARY LOGIC ---
   function listenToNewBooks() {
     onValue(ref(db, 'books'), (snapshot) => {
       window.allBooks = snapshot.val();
@@ -95,22 +83,7 @@
     });
   }
 
-  window.logToFirebase = function(bookTitle, bookUrl) {
-    if (!window.userEmail) return;
-    const safeEmail = window.userEmail.replace(/\./g, ',');
-    const now = new Date().toLocaleString('id-ID');
-    
-    set(ref(db, 'logs/' + safeEmail), {
-      name: window.userName,
-      email: window.userEmail,
-      lastRead: bookTitle,
-      time: now
-    });
-
-    const historyRef = ref(db, `users/${safeEmail}/history/${bookTitle.replace(/[^a-zA-Z0-9]/g, '')}`);
-    set(historyRef, { title: bookTitle, url: bookUrl, time: now });
-  };
-
+  // --- HISTORY SYSTEM (WITH PROGRESS) ---
   window.renderHistory = function() {
     if (!window.userEmail) return;
     const safeEmail = window.userEmail.replace(/\./g, ',');
@@ -118,25 +91,73 @@
 
     onValue(ref(db, `users/${safeEmail}/history`), (snapshot) => {
       const data = snapshot.val();
-      if (data && list) {
-        list.innerHTML = Object.values(data).map(x => `
+      if (data) {
+        const sortedData = Object.values(data).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        list.innerHTML = sortedData.map(x => `
           <div class="book-item">
-            <div class="book-box" style="height:150px; background-size: contain; background-repeat: no-repeat; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('${x.url}', '${x.title}')">
+            <div class="book-box" style="height:150px; background-image: url('${x.cover}');" onclick="openBook('${x.url}', '${x.title}', '${x.cover}')">
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width: ${x.progress || 0}%"></div>
+                </div>
             </div>
             <p class="book-title" style="font-size:0.7em;">${x.title}<br>
+            <span style="color:#d4af37; font-size:0.9em;">${x.progress || 0}% Selesai</span><br>
             <span style="opacity:0.5">${x.time}</span></p>
           </div>
         `).join('');
-      } else if (list) {
+      } else {
         list.innerHTML = "<p style='opacity:0.5; grid-column: 1/-1;'>Belum ada riwayat membaca.</p>";
       }
     });
   };
 
-  window.openBook = function(url, title){
-    window.logToFirebase(title, url);
+  window.logToFirebase = function(bookTitle, bookUrl, bookCover) {
+    if (!window.userEmail) return;
+    const safeEmail = window.userEmail.replace(/\./g, ',');
+    const now = new Date().toLocaleString('id-ID');
+    const timestamp = new Date().toISOString();
+
+    set(ref(db, 'logs/' + safeEmail), {
+      name: window.userName,
+      email: window.userEmail,
+      lastRead: bookTitle,
+      time: now
+    });
+
+    const safeTitle = bookTitle.replace(/[^a-zA-Z0-9]/g, '_');
+    const historyRef = ref(db, `users/${safeEmail}/history/${safeTitle}`);
+    
+    get(historyRef).then((snapshot) => {
+        const existingData = snapshot.val();
+        update(historyRef, {
+            title: bookTitle,
+            url: bookUrl,
+            cover: bookCover,
+            time: now,
+            timestamp: timestamp,
+            progress: existingData ? (existingData.progress || 0) : 0
+        });
+    });
+  };
+
+  window.updateProgress = function(percent) {
+    if (!window.userEmail || !window.currentActiveTitle) return;
+    const safeEmail = window.userEmail.replace(/\./g, ',');
+    const safeTitle = window.currentActiveTitle.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    update(ref(db, `users/${safeEmail}/history/${safeTitle}`), {
+        progress: percent
+    });
+    alert("Progress disimpan!");
+  };
+
+  window.openBook = function(url, title, cover){
+    window.currentActiveTitle = title;
+    window.currentActiveUrl = url;
     document.getElementById('book-frame').src = url;
+    document.getElementById('reader-title').innerText = title;
     showPage('reader');
+    if(window.logToFirebase) window.logToFirebase(title, url, cover);
   };
 
   window.filterBooks = function() {
@@ -156,23 +177,47 @@
 
   function updateLibraryUI(data, filterText = "") {
       const container = document.getElementById('dynamic-books');
-      if (!container) return;
+      const manageBody = document.getElementById('admin-manage-body');
       if (data && Object.keys(data).length > 0) {
         const bookEntries = Object.entries(data);
-        container.innerHTML = bookEntries.map(([key, book]) => `
+        const lastIndex = bookEntries.length - 1;
+        container.innerHTML = bookEntries.map(([key, book], index) => `
           <div class="book-item">
-            <div class="book-box" style="background-image: url('${book.cover}');" onclick="playClick(); openBook('${book.url}', '${book.title}')"></div>
+            ${index === lastIndex && filterText === "" ? '<span class="badge-new">NEW</span>' : ''}
+            <div class="book-tooltip">${book.desc}</div>
+            <div class="book-box" style="background-image: url('${book.cover}');" onclick="playClick(); openBook('${book.url}', '${book.title}', '${book.cover}')"></div>
             <p class="book-title">${book.title}</p>
           </div>
         `).join('');
+        if(manageBody && filterText === "") {
+            manageBody.innerHTML = bookEntries.map(([key, book]) => `
+            <tr><td>${book.title}</td><td><button onclick="deleteBook('${key}')" style="background:#ff5252; border:none; color:white; padding:5px 10px; border-radius:4px; cursor:pointer;">Hapus</button></td></tr>
+            `).join('');
+        }
       } else { container.innerHTML = ""; }
   }
+
+  window.deleteBook = function(key) {
+    if(confirm("Hapus majalah ini dari rak?")) { remove(ref(db, 'books/' + key)); }
+  };
+
+  window.addNewBook = function() {
+    const title = document.getElementById('btitle').value;
+    const url = document.getElementById('burl').value;
+    const cover = document.getElementById('bcover').value || 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg';
+    const desc = document.getElementById('bdesc').value;
+    if(title && url) {
+      push(ref(db, 'books'), { title, url, cover, desc });
+      alert("Buku berhasil ditambahkan!");
+      document.querySelectorAll('.admin-input').forEach(i => i.value = '');
+    }
+  };
 
   function listenToUserLogs() {
     onValue(ref(db, 'logs'), (snapshot) => {
       const data = snapshot.val();
       const tbody = document.getElementById('admin-log-body');
-      if (data && tbody) {
+      if (data) {
         tbody.innerHTML = Object.values(data).map(user => `
           <tr><td>${user.name}</td><td style="font-size:0.8em">${user.email}</td><td style="color:#d4af37; font-weight:bold">${user.lastRead}</td><td style="font-size:0.8em; opacity:0.6">${user.time}</td></tr>
         `).join('');
@@ -182,71 +227,126 @@
 </script>
 
 <style>
-/* --- STYLE TETAP SAMA --- */
+/* STYLE TETAP SAMA SESUAI RANCANGAN AWAL */
 #landing-page {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
   display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.8s ease;
+  overflow-y: auto; padding: 20px 0;
 }
-.logo-landing { width: 100px; margin-bottom: 10px; }
+.logo-landing { width: 100px; margin-bottom: 10px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
 .welcome-title {
   font-size: 2em; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 20px; text-align: center;
-  color: #d7ccc8;
+  background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%);
+  background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; animation: textShine 4s linear infinite; color: #d7ccc8;
 }
 .login-box {
   background: rgba(45, 27, 24, 0.8); padding: 25px; border-radius: 15px; border: 1px solid #d4af37;
-  width: 300px; display: flex; flex-direction: column; gap: 10px;
+  width: 300px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 .login-input {
   background: rgba(26, 15, 13, 0.9); border: 1px solid rgba(212, 175, 55, 0.5); 
   padding: 10px; color: white; border-radius: 5px; outline: none;
 }
-.enter-btn { background: #5d4037; color: #fff; border: 1px solid #d4af37; padding: 10px; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 0.8em; }
+.login-input:focus { border-color: #d4af37; }
+.or-divider { margin: 10px 0; font-size: 0.8em; color: #d4af37; opacity: 0.6; display: flex; align-items: center; gap: 10px; }
+.or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: rgba(212, 175, 55, 0.3); }
+.enter-btn { background: #5d4037; color: #fff; border: 1px solid #d4af37; padding: 10px; border-radius: 30px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; font-size: 0.8em; }
+.enter-btn:hover { background: #d4af37; color: #1a0f0d; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
 .google-btn { background: #fff; color: #444; border: none; }
-
 body {
-  margin: 0; padding: 0; font-family: sans-serif;
-  background: #1a0f0d; color: #efebe9; min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #1a0f0d; background-image: radial-gradient(circle at center, #3d2b27 0%, #1a0f0d 100%);
+  color: #efebe9; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
 }
-
-.main-container { width: 100%; max-width: 1100px; margin: 40px auto; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-
+.dust-particle {
+  position: fixed; background: #ffd700; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0;
+  box-shadow: 0 0 5px #ffd700; animation: float-dust linear infinite;
+}
+@keyframes float-dust {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 0.6; }
+  100% { transform: translateY(-100vh) translateX(40px); opacity: 0; }
+}
+.main-container { width: 100%; max-width: 1100px; margin: 40px auto; padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
+.logo-main { width: 80px; margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.2)); }
+.search-container { width: 100%; max-width: 400px; margin-bottom: 30px; position: relative; }
 .search-input {
-    width: 100%; max-width: 400px; padding: 12px 20px; background: rgba(45, 27, 24, 0.6); 
-    border: 1px solid #d4af37; border-radius: 25px; color: white; margin-bottom: 30px; text-align: center;
+    width: 100%; padding: 12px 20px; background: rgba(45, 27, 24, 0.6); 
+    border: 1px solid #d4af37; border-radius: 25px; color: white; outline: none;
+    transition: 0.3s; box-sizing: border-box; text-align: center;
 }
-
+.search-input:focus { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); background: rgba(45, 27, 24, 0.9); }
 .library-shelf {
   width: 100%; background: #2d1b18; border: 12px solid #1a0f0d;
-  padding: 60px 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; border-radius: 4px; box-sizing: border-box;
+  box-shadow: inset 0 0 100px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6);
+  padding: 80px 20px 40px 20px; position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; border-radius: 4px; box-sizing: border-box;
 }
-
-.book-item { display: flex; flex-direction: column; align-items: center; width: 170px; }
+.shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 160px; height: 15px; background: linear-gradient(to bottom, #444, #222); border-bottom: 3px solid #d4af37; border-radius: 8px 8px 0 0; z-index: 10; }
+.lamp-glow { position: absolute; top: 7px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; height: 350px; background: radial-gradient(ellipse at top, rgba(212, 175, 55, 0.15) 0%, transparent 75%); pointer-events: none; }
+.book-item { display: flex; flex-direction: column; align-items: center; width: 170px; z-index: 2; margin-bottom: 20px; position: relative; animation: float-book 6s ease-in-out infinite; }
+@keyframes float-book { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 .book-box {
-  width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px; cursor: pointer; transition: 0.3s;
+  width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px; cursor: pointer; position: relative; transition: all 0.5s; box-shadow: -5px 5px 15px rgba(0,0,0,0.5);
+  -webkit-box-reflect: below 2px linear-gradient(transparent, transparent 50%, rgba(255,255,255,0.1));
 }
-.book-box:hover { transform: scale(1.05); }
-.book-title { margin-top: 15px; font-weight: bold; font-size: 0.9em; text-align: center; }
-
-#history-list .book-box { background-size: contain !important; background-repeat: no-repeat; }
-#history-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; width: 100%; padding-bottom: 120px; }
-
-.admin-card { width: 100%; max-width: 900px; background: rgba(0,0,0,0.3); padding: 20px; border: 1px solid #d4af37; margin-bottom: 20px; }
+.book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
+.book-title {
+  margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; line-height: 1.4;
+  background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%);
+  background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; animation: textShine 3s linear infinite; color: #d7ccc8;
+}
+@keyframes textShine { to { background-position: 200% center; } }
+.badge-new { position: absolute; top: -10px; right: -10px; background: #d4af37; color: #1a0f0d; padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; box-shadow: 0 0 15px #d4af37; animation: pulse-new 2s infinite; z-index: 10; }
+.book-tooltip { position: absolute; bottom: 100%; background: rgba(43, 29, 26, 0.95); color: #d7ccc8; padding: 10px; border-radius: 5px; border: 1px solid #d4af37; font-size: 0.75em; width: 180px; text-align: center; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 50; pointer-events: none; }
+.book-item:hover .book-tooltip { opacity: 1; visibility: visible; transform: translateY(-10px); }
+.book-locked { filter: grayscale(1) brightness(0.2) blur(1.5px); cursor: not-allowed !important; border: 2px solid rgba(212, 175, 55, 0.2); }
+.book-locked::after {
+    content: "COMING SOON"; position: absolute; top: 50%; left: -10%; width: 120%;
+    transform: translateY(-50%) rotate(-20deg); background: #d4af37; color: #1a0f0d;
+    font-weight: bold; font-size: 0.8rem; text-align: center; padding: 8px 0; box-shadow: 0 0 20px rgba(0,0,0,0.5); opacity: 0.9;
+}
+#history-list {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 40px 20px; justify-items: center; width: 100%; padding: 20px 0 120px 0;
+}
+.admin-card { width: 100%; max-width: 900px; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px; border: 1px solid rgba(212, 175, 55, 0.2); margin-bottom: 20px; }
+.admin-input { width: 100%; padding: 10px; margin: 10px 0; background: #2d1b18; border: 1px solid #d4af37; color: white; border-radius: 5px; box-sizing: border-box; }
 table { width: 100%; border-collapse: collapse; }
-th, td { padding: 10px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); text-align: left; }
-
+th { text-align: left; padding: 12px; border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em; }
+td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9em; }
 nav {
-  position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95);
-  display: flex; justify-content: center; gap: 10px; padding: 15px 0; z-index: 100;
+  position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95); backdrop-filter: blur(8px);
+  display: flex; justify-content: center; gap: 15px; padding: 20px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
-.nav-btn { background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 0.8em; font-weight: bold; }
-
-.page { display: none; width: 100%; }
+.nav-btn {
+  background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: all 0.3s; font-size: 0.8em; display: flex; align-items: center; gap: 10px;
+}
+.nav-btn:hover { background: #d4af37; color: #1a0f0d; transform: translateY(-5px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4); }
+.equalizer { display: flex; align-items: flex-end; gap: 3px; height: 18px; width: 22px; }
+.eq-bar { width: 4px; background: #fff59d; animation: eq-anim 0.5s ease-in-out infinite alternate; animation-play-state: paused; }
+@keyframes eq-anim { 0% { height: 4px; } 100% { height: 18px; } }
+.page { display: none; width: 100%; padding-bottom: 120px; }
 .active { display: block; }
 #reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; display:none; flex-direction: column;}
 #reader.active { display: flex; }
 iframe { width: 100%; flex-grow: 1; border: none; }
-.reader-header { background: #1a0f0d; padding: 10px; border-bottom: 1px solid #d4af37; }
+
+/* NEW READER HEADER (WITH PROGRESS CONTROL) */
+.reader-header {
+  background: #1a0f0d; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em;
+}
+/* PROGRESS UI */
+.progress-bar-container {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: rgba(0,0,0,0.5); overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%; background: #d4af37; transition: 0.3s; box-shadow: 0 0 10px #d4af37;
+}
+.progress-input { width: 50px; background: #2d1b18; border: 1px solid #d4af37; color: white; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
 </style>
 </head>
 
@@ -258,42 +358,86 @@ iframe { width: 100%; flex-grow: 1; border: none; }
 <div id="landing-page">
   <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-landing">
   <div class="welcome-title">Smanda Library</div>
+  
   <div class="login-box">
     <input type="email" id="email-input" class="login-input" placeholder="Email Address">
     <input type="password" id="pass-input" class="login-input" placeholder="Password">
-    <button class="enter-btn" onclick="loginEmail()">Login Email</button>
+    <button class="enter-btn" onclick="playClick(); loginEmail()">Login Email</button>
     <button class="enter-btn" style="background:transparent; border:none; font-size:0.65em; opacity:0.7" onclick="registerEmail()">Belum punya akun? Daftar</button>
-    <div style="text-align:center; color:#d4af37; font-size:0.8em; margin:5px 0;">OR</div>
-    <button class="enter-btn google-btn" onclick="startLibrary()">Login with Google</button>
+    <div class="or-divider">OR</div>
+    <button class="enter-btn google-btn" onclick="playClick(); startLibrary()">Login with Google</button>
   </div>
 </div>
 
 <div id="home" class="page active">
   <div class="main-container">
-    <h2 class="welcome-title">Digital Archive</h2>
-    <input type="text" id="search-input" class="search-input" placeholder="Cari majalah..." onkeyup="filterBooks()">
+    <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-main">
+    <h2 style="text-align: center;" class="welcome-title">Digital Archive</h2>
+    <div class="search-container">
+        <input type="text" id="search-input" class="search-input" placeholder="Cari majalah..." onkeyup="filterBooks()">
+    </div>
     <div class="library-shelf">
+      <div class="shelf-lamp"></div><div class="lamp-glow"></div>
       <div id="dynamic-books" style="display:contents"></div>
+      
       <div class="book-item static-book">
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'Smanda Vibes (February)')"></div>
+        <div class="book-tooltip">Edisi perdana yang penuh semangat kebersamaan.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/905f390c0d.html', 'Smanda Vibes (November)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
+        <p class="book-title">Smanda Vibes<br>(November Edition)</p>
+      </div>
+      <div class="book-item static-book">
+        <div class="book-tooltip">Awal tahun baru dengan cerita-cerita segar dari sekolah.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/44752310d5.html', 'Smanda Vibes (January)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
+        <p class="book-title">Smanda Vibes<br>(January Edition)</p>
+      </div>
+      <div class="book-item static-book">
+        <div class="book-tooltip">Merayakan momen kasih sayang dan prestasi siswa.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'Smanda Vibes (February)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
         <p class="book-title">Smanda Vibes<br>(February Edition)</p>
       </div>
+      <div class="book-item static-book">
+        <div class="book-tooltip">Edisi spesial Maret dengan liputan acara besar sekolah.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://online.fliphtml5.com/owlqz/bxoy/', 'Smanda Vibes (March)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
+        <p class="book-title">Smanda Vibes<br>(March Edition)</p>
       </div>
+      <div class="book-item static-book">
+        <div class="book-tooltip">Edisi April: Menilik kreativitas tanpa batas di tengah bulan suci.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'Smanda Vibes (April)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
+        <p class="book-title">Smanda Vibes<br>(April Edition)</p>
+      </div>
+      <div class="book-item static-book">
+        <span class="badge-new badge-soon">MISTERI</span>
+        <div class="book-box book-locked" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');"></div>
+        <p class="book-title" style="opacity:0.5;">Smanda Vibes<br>(May Edition)</p>
+      </div>
+    </div>
   </div>
 </div>
 
 <div id="history-page" class="page">
   <div class="main-container">
-    <h2 class="welcome-title">History</h2>
+    <h2 class="welcome-title">Your Reading History</h2>
     <div id="history-list"></div>
   </div>
 </div>
 
 <div id="admin-page" class="page">
   <div class="main-container">
-    <h2 class="welcome-title">Admin</h2>
+    <h2 class="welcome-title">Admin Control</h2>
+    <div class="admin-card" id="admin-upload-section" style="display:none;">
+      <h3 style="color:#d4af37; margin-top:0;">Upload Majalah Baru</h3>
+      <input type="text" id="btitle" class="admin-input" placeholder="Judul Majalah">
+      <input type="text" id="burl" class="admin-input" placeholder="URL Heyzine">
+      <input type="text" id="bcover" class="admin-input" placeholder="URL Gambar Cover">
+      <input type="text" id="bdesc" class="admin-input" placeholder="Deskripsi Singkat">
+      <button class="enter-btn" onclick="addNewBook()" style="width:100%; margin-top:10px;">Tambahkan</button>
+    </div>
+    <div class="admin-card" id="admin-manage-section" style="display:none;">
+        <h3 style="color:#d4af37; margin-top:0;">Kelola Rak Dinamis</h3>
+        <table><thead><tr><th>Judul Majalah</th><th>Aksi</th></tr></thead><tbody id="admin-manage-body"></tbody></table>
+    </div>
     <div class="admin-card">
-      <h3 style="color:#d4af37;">User Activity</h3>
+      <h3 style="color:#d4af37; margin-top:0;">User Activity</h3>
       <table><thead><tr><th>User</th><th>Email</th><th>Reading</th><th>Waktu</th></tr></thead><tbody id="admin-log-body"></tbody></table>
     </div>
   </div>
@@ -301,23 +445,67 @@ iframe { width: 100%; flex-grow: 1; border: none; }
 
 <div id="reader" class="page">
   <div class="reader-header">
-    <button class="nav-btn" onclick="showPage('home')">← KELUAR</button>
+    <div style="display:flex; align-items:center; gap:10px">
+        <button class="nav-btn" style="padding:5px 15px;" onclick="playClick(); showPage('home')">← KELUAR</button>
+        <span id="reader-title" style="font-weight:bold">Reader</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px">
+        <span style="font-size:0.8em">Progress:</span>
+        <input type="number" id="prog-input" class="progress-input" min="0" max="100" value="0">
+        <button class="nav-btn" style="padding:5px 10px; font-size:0.7em;" onclick="updateProgress(document.getElementById('prog-input').value)">Simpan</button>
+    </div>
   </div>
-  <iframe id="book-frame" src=""></iframe>
+  <iframe id="book-frame" src="" allowfullscreen></iframe>
 </div>
 
 <nav>
-  <button class="nav-btn" onclick="showPage('home')">Lobby</button>
-  <button class="nav-btn" onclick="showPage('history-page')">History</button>
-  <button class="nav-btn" id="admin-nav-btn" style="display:none;" onclick="showPage('admin-page')">Admin</button>
-  <button class="nav-btn" onclick="logoutLibrary()" style="color:#ff5252;">Logout</button>
+  <button class="nav-btn" onclick="playClick(); showPage('home')">Main Lobby</button>
+  <button class="nav-btn" onclick="playClick(); showPage('history-page')">History</button>
+  <button class="nav-btn" id="admin-nav-btn" style="display:none;" onclick="playClick(); showPage('admin-page')">Admin</button>
+  <button class="nav-btn" id="music-toggle" onclick="playClick(); toggleMusic()">
+    <span id="music-text">Play Music</span>
+    <div class="equalizer"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>
+  </button>
+  <button class="nav-btn" onclick="logoutLibrary()" style="color:#ff5252; border-color:#ff5252;">Logout</button>
 </nav>
 
 <script>
-function playClick() { document.getElementById('click-sfx').play(); }
+const bgMusic = document.getElementById('bg-music');
+const musicBtn = document.getElementById('music-toggle');
+const eqBars = document.querySelectorAll('.eq-bar');
+
+function createDust() {
+  for (let i = 0; i < 40; i++) {
+    let dust = document.createElement('div');
+    dust.className = 'dust-particle';
+    let size = Math.random() * 3 + 1 + 'px';
+    dust.style.width = size; dust.style.height = size;
+    dust.style.left = Math.random() * 100 + 'vw'; dust.style.top = Math.random() * 100 + 'vh';
+    dust.style.animationDuration = Math.random() * 8 + 12 + 's';
+    document.body.appendChild(dust);
+  }
+}
+window.onload = createDust;
+
+function playClick() { const sfx = document.getElementById('click-sfx'); sfx.currentTime = 0; sfx.play(); }
+
 function showPage(id){
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  if(id === 'home') { document.getElementById('book-frame').src = ""; bgMusic.volume = 1.0; } 
+  else if(id === 'reader') { bgMusic.volume = 0.3; }
+}
+
+function toggleMusic() {
+  if (bgMusic.paused) {
+    bgMusic.play();
+    document.getElementById('music-text').textContent = "Pause Music";
+    eqBars.forEach(bar => bar.style.animationPlayState = 'running');
+  } else {
+    bgMusic.pause();
+    document.getElementById('music-text').textContent = "Play Music";
+    eqBars.forEach(bar => bar.style.animationPlayState = 'paused');
+  }
 }
 </script>
 
