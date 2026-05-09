@@ -45,7 +45,7 @@
     const email = document.getElementById('email-input').value;
     const pass = document.getElementById('pass-input').value;
     if(email && pass) {
-      createUserWithEmailAndPassword(auth, email, pass).catch((err) => console.error("Error:", err.message));
+      createUserWithEmailAndPassword(auth, email, pass).then(() => alert("Registrasi Berhasil!")).catch((err) => console.error("Error:", err.message));
     }
   };
 
@@ -83,7 +83,6 @@
     });
   }
 
-  // --- HISTORY SYSTEM (FIXED DISPLAY) ---
   window.renderHistory = function() {
     if (!window.userEmail) return;
     const safeEmail = window.userEmail.replace(/\./g, ',');
@@ -97,6 +96,7 @@
           <div class="book-item">
             <div class="book-box history-box" style="background-image: url('${x.cover}');" onclick="openBook('${x.url}', '${x.title}', '${x.cover}')"></div>
             <p class="book-title" style="font-size:0.75em;">${x.title}<br>
+            <span style="color:#d4af37; font-size:0.85em;">${x.progress || '0'}% Selesai</span><br>
             <span style="opacity:0.5; font-size:0.8em;">${x.time}</span></p>
           </div>
         `).join('');
@@ -119,16 +119,31 @@
       time: now
     });
 
-    const safeTitle = bookTitle.replace(/[^a-zA-Z0-9]/g, '_');
+    const safeTitle = bookTitle.replace(/[.#$[\]]/g, '_');
     const historyRef = ref(db, `users/${safeEmail}/history/${safeTitle}`);
     
-    update(historyRef, {
-        title: bookTitle,
-        url: bookUrl,
-        cover: bookCover,
-        time: now,
-        timestamp: timestamp
+    // Ambil data lama untuk mempertahankan progress jika sudah ada
+    get(historyRef).then((snapshot) => {
+        const oldData = snapshot.val();
+        update(historyRef, {
+            title: bookTitle,
+            url: bookUrl,
+            cover: bookCover,
+            time: now,
+            timestamp: timestamp,
+            progress: oldData ? (oldData.progress || 0) : 0
+        });
     });
+  };
+
+  window.updateProgress = function() {
+    const prg = prompt("Update progress membaca (0-100):", "50");
+    if (prg !== null && !isNaN(prg)) {
+        const safeEmail = window.userEmail.replace(/\./g, ',');
+        const safeTitle = window.currentActiveTitle.replace(/[.#$[\]]/g, '_');
+        update(ref(db, `users/${safeEmail}/history/${safeTitle}`), { progress: prg });
+        alert("Progress disimpan!");
+    }
   };
 
   window.openBook = function(url, title, cover){
@@ -211,7 +226,7 @@
 #landing-page {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
-  display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.8s ease;
+  display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 5000; transition: opacity 0.8s ease;
   overflow-y: auto; padding: 20px 0;
 }
 .logo-landing { width: 100px; margin-bottom: 10px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
@@ -235,11 +250,13 @@
 .enter-btn { background: #5d4037; color: #fff; border: 1px solid #d4af37; padding: 10px; border-radius: 30px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; font-size: 0.8em; }
 .enter-btn:hover { background: #d4af37; color: #1a0f0d; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
 .google-btn { background: #fff; color: #444; border: none; }
+
 body {
   margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #1a0f0d; background-image: radial-gradient(circle at center, #3d2b27 0%, #1a0f0d 100%);
   color: #efebe9; min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
 }
+
 .dust-particle {
   position: fixed; background: #ffd700; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0;
   box-shadow: 0 0 5px #ffd700; animation: float-dust linear infinite;
@@ -249,8 +266,10 @@ body {
   10% { opacity: 0.6; }
   100% { transform: translateY(-100vh) translateX(40px); opacity: 0; }
 }
+
 .main-container { width: 100%; max-width: 1100px; margin: 40px auto; padding: 20px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; }
 .logo-main { width: 80px; margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.2)); }
+
 .search-container { width: 100%; max-width: 400px; margin-bottom: 30px; position: relative; }
 .search-input {
     width: 100%; padding: 12px 20px; background: rgba(45, 27, 24, 0.6); 
@@ -258,6 +277,7 @@ body {
     transition: 0.3s; box-sizing: border-box; text-align: center;
 }
 .search-input:focus { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); background: rgba(45, 27, 24, 0.9); }
+
 .library-shelf {
   width: 100%; background: #2d1b18; border: 12px solid #1a0f0d;
   box-shadow: inset 0 0 100px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6);
@@ -265,21 +285,17 @@ body {
 }
 .shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 160px; height: 15px; background: linear-gradient(to bottom, #444, #222); border-bottom: 3px solid #d4af37; border-radius: 8px 8px 0 0; z-index: 10; }
 .lamp-glow { position: absolute; top: 7px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; height: 350px; background: radial-gradient(ellipse at top, rgba(212, 175, 55, 0.15) 0%, transparent 75%); pointer-events: none; }
+
 .book-item { display: flex; flex-direction: column; align-items: center; width: 170px; z-index: 2; margin-bottom: 20px; position: relative; animation: float-book 6s ease-in-out infinite; }
 @keyframes float-book { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
 .book-box {
   width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px; cursor: pointer; position: relative; transition: all 0.5s; box-shadow: -5px 5px 15px rgba(0,0,0,0.5);
   -webkit-box-reflect: below 2px linear-gradient(transparent, transparent 50%, rgba(255,255,255,0.1));
 }
-
-/* FIX GAMBAR HISTORY AGAR TIDAK TERPOTONG */
-.history-box {
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-color: rgba(0,0,0,0.2);
-}
-
+.history-box { background-size: contain; background-repeat: no-repeat; background-color: rgba(0,0,0,0.2); }
 .book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
+
 .book-title {
   margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; line-height: 1.4;
   background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%);
@@ -287,24 +303,29 @@ body {
   -webkit-text-fill-color: transparent; animation: textShine 3s linear infinite; color: #d7ccc8;
 }
 @keyframes textShine { to { background-position: 200% center; } }
+
 .badge-new { position: absolute; top: -10px; right: -10px; background: #d4af37; color: #1a0f0d; padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; box-shadow: 0 0 15px #d4af37; animation: pulse-new 2s infinite; z-index: 10; }
 .book-tooltip { position: absolute; bottom: 100%; background: rgba(43, 29, 26, 0.95); color: #d7ccc8; padding: 10px; border-radius: 5px; border: 1px solid #d4af37; font-size: 0.75em; width: 180px; text-align: center; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 50; pointer-events: none; }
 .book-item:hover .book-tooltip { opacity: 1; visibility: visible; transform: translateY(-10px); }
+
 .book-locked { filter: grayscale(1) brightness(0.2) blur(1.5px); cursor: not-allowed !important; border: 2px solid rgba(212, 175, 55, 0.2); }
 .book-locked::after {
     content: "COMING SOON"; position: absolute; top: 50%; left: -10%; width: 120%;
     transform: translateY(-50%) rotate(-20deg); background: #d4af37; color: #1a0f0d;
     font-weight: bold; font-size: 0.8rem; text-align: center; padding: 8px 0; box-shadow: 0 0 20px rgba(0,0,0,0.5); opacity: 0.9;
 }
+
 #history-list {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 40px 20px; justify-items: center; width: 100%; padding: 20px 0 120px 0;
 }
+
 .admin-card { width: 100%; max-width: 900px; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px; border: 1px solid rgba(212, 175, 55, 0.2); margin-bottom: 20px; }
 .admin-input { width: 100%; padding: 10px; margin: 10px 0; background: #2d1b18; border: 1px solid #d4af37; color: white; border-radius: 5px; box-sizing: border-box; }
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; padding: 12px; border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em; }
 td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9em; }
+
 nav {
   position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95); backdrop-filter: blur(8px);
   display: flex; justify-content: center; gap: 15px; padding: 20px 0; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2);
@@ -313,11 +334,14 @@ nav {
   background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: all 0.3s; font-size: 0.8em; display: flex; align-items: center; gap: 10px;
 }
 .nav-btn:hover { background: #d4af37; color: #1a0f0d; transform: translateY(-5px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4); }
+
 .equalizer { display: flex; align-items: flex-end; gap: 3px; height: 18px; width: 22px; }
 .eq-bar { width: 4px; background: #fff59d; animation: eq-anim 0.5s ease-in-out infinite alternate; animation-play-state: paused; }
 @keyframes eq-anim { 0% { height: 4px; } 100% { height: 18px; } }
+
 .page { display: none; width: 100%; padding-bottom: 120px; }
-.active { display: block; }
+.page.active { display: block; }
+
 #reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; display:none; flex-direction: column;}
 #reader.active { display: flex; }
 iframe { width: 100%; flex-grow: 1; border: none; }
@@ -364,26 +388,6 @@ iframe { width: 100%; flex-grow: 1; border: none; }
         <p class="book-title">Smanda Vibes<br>(November Edition)</p>
       </div>
       <div class="book-item static-book">
-        <div class="book-tooltip">Awal tahun baru dengan cerita-cerita segar dari sekolah.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/44752310d5.html', 'Smanda Vibes (January)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
-        <p class="book-title">Smanda Vibes<br>(January Edition)</p>
-      </div>
-      <div class="book-item static-book">
-        <div class="book-tooltip">Merayakan momen kasih sayang dan prestasi siswa.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'Smanda Vibes (February)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
-        <p class="book-title">Smanda Vibes<br>(February Edition)</p>
-      </div>
-      <div class="book-item static-book">
-        <div class="book-tooltip">Edisi spesial Maret dengan liputan acara besar sekolah.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://online.fliphtml5.com/owlqz/bxoy/', 'Smanda Vibes (March)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
-        <p class="book-title">Smanda Vibes<br>(March Edition)</p>
-      </div>
-      <div class="book-item static-book">
-        <div class="book-tooltip">Edisi April: Menilik kreativitas tanpa batas di tengah bulan suci.</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'Smanda Vibes (April)', 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg')"></div>
-        <p class="book-title">Smanda Vibes<br>(April Edition)</p>
-      </div>
-      <div class="book-item static-book">
         <span class="badge-new badge-soon">MISTERI</span>
         <div class="book-box book-locked" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');"></div>
         <p class="book-title" style="opacity:0.5;">Smanda Vibes<br>(May Edition)</p>
@@ -427,6 +431,7 @@ iframe { width: 100%; flex-grow: 1; border: none; }
         <button class="nav-btn" style="padding:5px 15px;" onclick="playClick(); showPage('home')">← KELUAR</button>
         <span id="reader-title" style="font-weight:bold; letter-spacing:1px;">Reader Mode</span>
     </div>
+    <button class="nav-btn" style="padding:5px 15px; font-size:0.7em;" onclick="updateProgress()">Update Progress %</button>
   </div>
   <iframe id="book-frame" src="" allowfullscreen></iframe>
 </div>
@@ -464,7 +469,9 @@ function playClick() { const sfx = document.getElementById('click-sfx'); sfx.cur
 
 function showPage(id){
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const target = document.getElementById(id);
+  if(target) target.classList.add('active');
+  
   if(id === 'home') { document.getElementById('book-frame').src = ""; bgMusic.volume = 1.0; } 
   else if(id === 'reader') { bgMusic.volume = 0.3; }
 }
