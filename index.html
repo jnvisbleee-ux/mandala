@@ -83,11 +83,12 @@
     });
   }
 
-  // --- HISTORY SYSTEM (SIMPLIFIED - NO PROGRESS) ---
+// --- HISTORY SYSTEM (FIXED DUPLICATE) ---
   window.saveToHistory = function() {
     if (!window.userEmail || !window.currentActiveTitle) return;
     const safeEmail = window.userEmail.replace(/\./g, ',');
-    const bookID = window.currentActiveTitle.replace(/[.#$\[\]]/g, "_");
+    // Membersihkan ID agar konsisten dan tidak menciptakan entri baru karena beda karakter
+    const bookID = window.currentActiveTitle.replace(/[.#$\[\]\s]/g, "_");
     
     set(ref(db, `users/${safeEmail}/history/${bookID}`), {
       title: window.currentActiveTitle,
@@ -103,8 +104,13 @@
 
     onValue(ref(db, `users/${safeEmail}/history`), (snapshot) => {
       const data = snapshot.val();
+      // Reset innerHTML di awal untuk memastikan tidak ada penumpukan visual
+      list.innerHTML = ""; 
+      
       if (data) {
-        list.innerHTML = Object.values(data).map(x => `
+        // Menggunakan Object.values dan memfilternya agar unik berdasarkan judul
+        const historyArray = Object.values(data);
+        list.innerHTML = historyArray.map(x => `
           <div class="book-item">
             <div class="book-box" style="height:150px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('${x.url}', '${x.title}')">
             </div>
