@@ -28,7 +28,6 @@
   
   const ADMIN_EMAILS = ["arvnn.ad4m@gmail.com", "admin2@gmail.com", "kicawmania@gmail.com"]; 
 
-  // --- AUTH FUNCTIONS ---
   window.startLibrary = function() {
     signInWithPopup(auth, provider).catch((err) => console.error("Login gagal:", err.message));
   };
@@ -70,20 +69,11 @@
       const lp = document.getElementById('landing-page');
       lp.style.opacity = '0';
       setTimeout(() => { lp.style.display = 'none'; }, 800);
-      renderHistory(); // Ambil history dari Firebase
+      renderHistory(); 
       listenToNewBooks();
     }
   });
 
-  // --- CORE LIBRARY LOGIC ---
-  function listenToNewBooks() {
-    onValue(ref(db, 'books'), (snapshot) => {
-      window.allBooks = snapshot.val();
-      updateLibraryUI(window.allBooks);
-    });
-  }
-
-  // --- PROGRESS & HISTORY SYSTEM (FIREBASE BASED) ---
   window.updateReadProgress = function(percentage) {
     if (!window.userEmail || !window.currentActiveTitle) return;
     const safeEmail = window.userEmail.replace(/\./g, ',');
@@ -95,7 +85,6 @@
       progress: percentage,
       time: new Date().toLocaleDateString('id-ID')
     });
-    document.getElementById('progress-val').innerText = percentage + "%";
   };
 
   window.renderHistory = function() {
@@ -108,7 +97,7 @@
       if (data) {
         list.innerHTML = Object.values(data).map(x => `
           <div class="book-item">
-            <div class="book-box" style="height:150px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="openBook('${x.url}', '${x.title}')">
+            <div class="book-box" style="height:150px; background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg'); background-size: contain; background-repeat: no-repeat; background-color: rgba(0,0,0,0.2);" onclick="openBook('${x.url}', '${x.title}')">
                <div style="position:absolute; bottom:0; width:100%; height:4px; background:rgba(255,255,255,0.1);">
                   <div style="width:${x.progress}%; height:100%; background:#d4af37; box-shadow:0 0 10px #d4af37;"></div>
                </div>
@@ -124,7 +113,17 @@
     });
   };
 
-  // --- DATA SYNC TO LOGS ---
+  window.openBook = function(url, title){
+    window.currentActiveTitle = title;
+    window.currentActiveUrl = url;
+    document.getElementById('book-frame').src = url;
+    showPage('reader');
+    if(window.logToFirebase) window.logToFirebase(title);
+    
+    // Default progress 100% saat dibuka (atau bisa disesuaikan nanti)
+    window.updateReadProgress(100); 
+  };
+
   window.logToFirebase = function(bookTitle) {
     if (!window.userEmail) return;
     const safeEmail = window.userEmail.replace(/\./g, ',');
@@ -136,25 +135,12 @@
     });
   };
 
-  // --- BOOK UI HELPERS ---
-  window.openBook = function(url, title){
-    window.currentActiveTitle = title;
-    window.currentActiveUrl = url;
-    document.getElementById('book-frame').src = url;
-    
-    // Cek progress terakhir dari DB untuk slider
-    const safeEmail = window.userEmail.replace(/\./g, ',');
-    const bookID = title.replace(/[.#$\[\]]/g, "_");
-    get(ref(db, `users/${safeEmail}/history/${bookID}`)).then((snap) => {
-        const prog = snap.exists() ? snap.val().progress : 0;
-        document.getElementById('progress-slider').value = prog;
-        document.getElementById('progress-val').innerText = prog + "%";
+  function listenToNewBooks() {
+    onValue(ref(db, 'books'), (snapshot) => {
+      window.allBooks = snapshot.val();
+      updateLibraryUI(window.allBooks);
     });
-
-    showPage('reader');
-    if(window.logToFirebase) window.logToFirebase(title);
-    window.updateReadProgress(document.getElementById('progress-slider').value); 
-  };
+  }
 
   window.filterBooks = function() {
     const searchTerm = document.getElementById('search-input').value.toLowerCase();
@@ -223,7 +209,7 @@
 </script>
 
 <style>
-/* --- STYLE TETAP SAMA SESUAI RANCANGAN AWAL --- */
+/* --- STYLE RANCANGAN AWAL --- */
 #landing-page {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
@@ -307,17 +293,6 @@ body {
 }
 @keyframes textShine { to { background-position: 200% center; } }
 
-.badge-new { position: absolute; top: -10px; right: -10px; background: #d4af37; color: #1a0f0d; padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; box-shadow: 0 0 15px #d4af37; animation: pulse-new 2s infinite; z-index: 10; }
-.book-tooltip { position: absolute; bottom: 100%; background: rgba(43, 29, 26, 0.95); color: #d7ccc8; padding: 10px; border-radius: 5px; border: 1px solid #d4af37; font-size: 0.75em; width: 180px; text-align: center; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 50; pointer-events: none; }
-.book-item:hover .book-tooltip { opacity: 1; visibility: visible; transform: translateY(-10px); }
-
-.book-locked { filter: grayscale(1) brightness(0.2) blur(1.5px); cursor: not-allowed !important; border: 2px solid rgba(212, 175, 55, 0.2); }
-.book-locked::after {
-    content: "COMING SOON"; position: absolute; top: 50%; left: -10%; width: 120%;
-    transform: translateY(-50%) rotate(-20deg); background: #d4af37; color: #1a0f0d;
-    font-weight: bold; font-size: 0.8rem; text-align: center; padding: 8px 0; box-shadow: 0 0 20px rgba(0,0,0,0.5); opacity: 0.9;
-}
-
 #history-list {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 40px 20px; justify-items: center; width: 100%; padding: 20px 0 120px 0;
@@ -345,16 +320,8 @@ nav {
 
 .page { display: none; width: 100%; padding-bottom: 120px; }
 .active { display: block; }
-#reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; display:none; flex-direction: column;}
-#reader.active { display: flex; }
-iframe { width: 100%; flex-grow: 1; border: none; }
-
-/* STYLE KHUSUS PROGRESS BAR DI READER */
-.progress-container {
-    background: #1a0f0d; padding: 10px 20px; display: flex; align-items: center; gap: 15px;
-    border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em;
-}
-input[type=range] { flex-grow: 1; accent-color: #d4af37; cursor: pointer; }
+#reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; }
+iframe { width: 100%; height: calc(100vh - 65px); border: none; }
 </style>
 </head>
 
@@ -413,11 +380,6 @@ input[type=range] { flex-grow: 1; accent-color: #d4af37; cursor: pointer; }
         <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'Smanda Vibes (April)')"></div>
         <p class="book-title">Smanda Vibes<br>(April Edition)</p>
       </div>
-      <div class="book-item static-book">
-        <span class="badge-new badge-soon">MISTERI</span>
-        <div class="book-box book-locked" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');"></div>
-        <p class="book-title" style="opacity:0.5;">Smanda Vibes<br>(May Edition)</p>
-      </div>
     </div>
   </div>
 </div>
@@ -452,12 +414,7 @@ input[type=range] { flex-grow: 1; accent-color: #d4af37; cursor: pointer; }
 </div>
 
 <div id="reader" class="page">
-  <div class="progress-container">
-    <button class="nav-btn" style="padding:5px 15px;" onclick="playClick(); showPage('home')">← KELUAR</button>
-    <span>Progress Membaca:</span>
-    <input type="range" id="progress-slider" min="0" max="100" value="0" onchange="updateReadProgress(this.value)">
-    <span id="progress-val">0%</span>
-  </div>
+  <button class="nav-btn" style="width:100%; border-radius:0; justify-content:center;" onclick="playClick(); showPage('home')">← KEMBALI KE RAK</button>
   <iframe id="book-frame" src="" allowfullscreen></iframe>
 </div>
 
