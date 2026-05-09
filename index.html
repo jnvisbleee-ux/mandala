@@ -26,7 +26,7 @@
   const db = getDatabase(app);
   const provider = new GoogleAuthProvider();
   
-  const ADMIN_EMAILS = ["arvnn.ad4m@gmail.com", "admin2@gmail.com"]; 
+  const ADMIN_EMAILS = ["arvnn.ad4m@gmail.com", "admin2@gmail.com", "kicawmania@gmail.com"]; 
 
   window.startLibrary = function() {
     signInWithPopup(auth, provider).catch((err) => console.error("Login gagal:", err.message));
@@ -60,7 +60,7 @@
       const isAdmin = ADMIN_EMAILS.includes(user.email);
       window.userName = user.displayName || user.email.split('@')[0];
       
-      // FITUR SAPAAN: Update teks di beranda
+      // Update sapaan
       const greetingDisplay = document.getElementById('user-greeting');
       if (greetingDisplay) {
         greetingDisplay.innerHTML = `Halo, ${isAdmin ? 'Admin ' : ''}<span style="color:#d4af37; font-weight:bold;">${window.userName}</span>! Selamat Datang.`;
@@ -209,14 +209,10 @@
 </script>
 
 <style>
-/* STYLE ASLI DIBAWAH TETAP SAMA */
 #landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.8s ease; overflow-y: auto; padding: 20px 0; }
 .logo-landing { width: 100px; margin-bottom: 10px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
 .welcome-title { font-size: 2em; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 20px; text-align: center; background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: textShine 4s linear infinite; color: #d7ccc8; }
-
-/* CSS UNTUK SAPAAN */
 .user-greeting { font-size: 1em; color: rgba(215, 204, 200, 0.7); margin-bottom: 25px; letter-spacing: 1px; }
-
 .login-box { background: rgba(45, 27, 24, 0.8); padding: 25px; border-radius: 15px; border: 1px solid #d4af37; width: 300px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 .login-input { background: rgba(26, 15, 13, 0.9); border: 1px solid rgba(212, 175, 55, 0.5); padding: 10px; color: white; border-radius: 5px; outline: none; }
 .or-divider { margin: 10px 0; font-size: 0.8em; color: #d4af37; opacity: 0.6; display: flex; align-items: center; gap: 10px; }
@@ -291,6 +287,7 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
     </div>
     <div class="library-shelf">
       <div class="shelf-lamp"></div><div class="lamp-glow"></div>
+      
       <div id="dynamic-books" style="display:contents"></div>
       
       <div class="book-item">
@@ -318,6 +315,13 @@ iframe { width: 100%; height: calc(100vh - 65px); border: none; }
         <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'Smanda Vibes (April)')"></div>
         <p class="book-title">Smanda Vibes<br>(April Edition)</p>
       </div>
+
+      <div class="book-item">
+        <div class="book-tooltip">Nantikan edisi terbaru yang sedang kami siapkan!</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg'); opacity: 0.3; filter: grayscale(1); cursor: default;"></div>
+        <p class="book-title" style="opacity:0.5">Edisi Selanjutnya<br>(Coming Soon)</p>
+      </div>
+
     </div>
   </div>
 </div>
