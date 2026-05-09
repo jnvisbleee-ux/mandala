@@ -83,7 +83,7 @@
     });
   }
 
-  // --- HISTORY SYSTEM (WITH PROGRESS) ---
+  // --- HISTORY SYSTEM (FIXED DISPLAY) ---
   window.renderHistory = function() {
     if (!window.userEmail) return;
     const safeEmail = window.userEmail.replace(/\./g, ',');
@@ -95,14 +95,9 @@
         const sortedData = Object.values(data).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         list.innerHTML = sortedData.map(x => `
           <div class="book-item">
-            <div class="book-box" style="height:150px; background-image: url('${x.cover}');" onclick="openBook('${x.url}', '${x.title}', '${x.cover}')">
-                <div class="progress-bar-container">
-                    <div class="progress-bar-fill" style="width: ${x.progress || 0}%"></div>
-                </div>
-            </div>
-            <p class="book-title" style="font-size:0.7em;">${x.title}<br>
-            <span style="color:#d4af37; font-size:0.9em;">${x.progress || 0}% Selesai</span><br>
-            <span style="opacity:0.5">${x.time}</span></p>
+            <div class="book-box history-box" style="background-image: url('${x.cover}');" onclick="openBook('${x.url}', '${x.title}', '${x.cover}')"></div>
+            <p class="book-title" style="font-size:0.75em;">${x.title}<br>
+            <span style="opacity:0.5; font-size:0.8em;">${x.time}</span></p>
           </div>
         `).join('');
       } else {
@@ -127,28 +122,13 @@
     const safeTitle = bookTitle.replace(/[^a-zA-Z0-9]/g, '_');
     const historyRef = ref(db, `users/${safeEmail}/history/${safeTitle}`);
     
-    get(historyRef).then((snapshot) => {
-        const existingData = snapshot.val();
-        update(historyRef, {
-            title: bookTitle,
-            url: bookUrl,
-            cover: bookCover,
-            time: now,
-            timestamp: timestamp,
-            progress: existingData ? (existingData.progress || 0) : 0
-        });
+    update(historyRef, {
+        title: bookTitle,
+        url: bookUrl,
+        cover: bookCover,
+        time: now,
+        timestamp: timestamp
     });
-  };
-
-  window.updateProgress = function(percent) {
-    if (!window.userEmail || !window.currentActiveTitle) return;
-    const safeEmail = window.userEmail.replace(/\./g, ',');
-    const safeTitle = window.currentActiveTitle.replace(/[^a-zA-Z0-9]/g, '_');
-    
-    update(ref(db, `users/${safeEmail}/history/${safeTitle}`), {
-        progress: percent
-    });
-    alert("Progress disimpan!");
   };
 
   window.openBook = function(url, title, cover){
@@ -227,7 +207,7 @@
 </script>
 
 <style>
-/* STYLE TETAP SAMA SESUAI RANCANGAN AWAL */
+/* STYLE UTAMA */
 #landing-page {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); 
@@ -291,6 +271,14 @@ body {
   width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px; cursor: pointer; position: relative; transition: all 0.5s; box-shadow: -5px 5px 15px rgba(0,0,0,0.5);
   -webkit-box-reflect: below 2px linear-gradient(transparent, transparent 50%, rgba(255,255,255,0.1));
 }
+
+/* FIX GAMBAR HISTORY AGAR TIDAK TERPOTONG */
+.history-box {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-color: rgba(0,0,0,0.2);
+}
+
 .book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
 .book-title {
   margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; line-height: 1.4;
@@ -333,20 +321,10 @@ nav {
 #reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; display:none; flex-direction: column;}
 #reader.active { display: flex; }
 iframe { width: 100%; flex-grow: 1; border: none; }
-
-/* NEW READER HEADER (WITH PROGRESS CONTROL) */
 .reader-header {
   background: #1a0f0d; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
   border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em;
 }
-/* PROGRESS UI */
-.progress-bar-container {
-    position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: rgba(0,0,0,0.5); overflow: hidden;
-}
-.progress-bar-fill {
-    height: 100%; background: #d4af37; transition: 0.3s; box-shadow: 0 0 10px #d4af37;
-}
-.progress-input { width: 50px; background: #2d1b18; border: 1px solid #d4af37; color: white; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
 </style>
 </head>
 
@@ -445,14 +423,9 @@ iframe { width: 100%; flex-grow: 1; border: none; }
 
 <div id="reader" class="page">
   <div class="reader-header">
-    <div style="display:flex; align-items:center; gap:10px">
+    <div style="display:flex; align-items:center; gap:15px;">
         <button class="nav-btn" style="padding:5px 15px;" onclick="playClick(); showPage('home')">← KELUAR</button>
-        <span id="reader-title" style="font-weight:bold">Reader</span>
-    </div>
-    <div style="display:flex; align-items:center; gap:10px">
-        <span style="font-size:0.8em">Progress:</span>
-        <input type="number" id="prog-input" class="progress-input" min="0" max="100" value="0">
-        <button class="nav-btn" style="padding:5px 10px; font-size:0.7em;" onclick="updateProgress(document.getElementById('prog-input').value)">Simpan</button>
+        <span id="reader-title" style="font-weight:bold; letter-spacing:1px;">Reader Mode</span>
     </div>
   </div>
   <iframe id="book-frame" src="" allowfullscreen></iframe>
