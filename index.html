@@ -9,7 +9,7 @@
   // --- FIREBASE CORE SYSTEM ---
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getDatabase, ref, set, onValue, push, remove, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAsYNPWyoeERQ1tVolEyVIqNf8GSFkhbGY",
@@ -94,9 +94,12 @@
     onValue(ref(db, 'books'), (snapshot) => {
       const data = snapshot.val();
       const container = document.getElementById('dynamic-books');
+      const manageBody = document.getElementById('admin-manage-body');
+      
       if (data) {
         const bookEntries = Object.entries(data);
         const lastIndex = bookEntries.length - 1;
+
         container.innerHTML = bookEntries.map(([key, book], index) => `
           <div class="book-item">
             ${index === lastIndex ? '<span class="badge-new">NEW</span>' : ''}
@@ -105,9 +108,40 @@
             <p class="book-title">${book.title}</p>
           </div>
         `).join('');
+
+        if(manageBody) {
+            manageBody.innerHTML = bookEntries.map(([key, book]) => `
+            <tr>
+                <td>${book.title}</td>
+                <td><button onclick="deleteBook('${key}')" style="background:#ff5252; border:none; color:white; padding:5px 10px; border-radius:4px; cursor:pointer;">Hapus</button></td>
+            </tr>
+            `).join('');
+        }
+      } else {
+        container.innerHTML = "";
+        if(manageBody) manageBody.innerHTML = "<tr><td colspan='2'>Tidak ada buku tambahan</td></tr>";
       }
     });
   }
+
+  window.deleteBook = function(key) {
+    if(confirm("Hapus majalah ini dari rak?")) {
+        remove(ref(db, 'books/' + key));
+    }
+  };
+
+  window.addNewBook = function() {
+    const title = document.getElementById('btitle').value;
+    const url = document.getElementById('burl').value;
+    const cover = document.getElementById('bcover').value || 'https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg';
+    const desc = document.getElementById('bdesc').value;
+
+    if(title && url) {
+      push(ref(db, 'books'), { title, url, cover, desc });
+      alert("Buku berhasil ditambahkan!");
+      document.querySelectorAll('.admin-input').forEach(i => i.value = '');
+    }
+  };
 
   window.openBook = function(url, title){
     document.getElementById('book-frame').src = url;
@@ -145,9 +179,10 @@
   }
 
   window.clearHistory = function() {
-    if(confirm("Hapus semua riwayat membaca Anda?")) {
+    if(confirm("Hapus semua riwayat membaca Anda dari awan (Firebase)?")) {
         const safeEmail = window.userEmail.replace(/\./g, ',');
         remove(ref(db, 'user_histories/' + safeEmail));
+        playClick();
     }
   };
 
@@ -173,64 +208,76 @@
 </script>
 
 <style>
-/* Reset & Base */
+/* Reset & Base Presisi */
 * { box-sizing: border-box; }
-body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: #1a0f0d; background-image: radial-gradient(circle at center, #3d2b27 0%, #1a0f0d 100%); color: #efebe9; min-height: 100vh; overflow-x: hidden; }
-
-/* Centering Alignment System */
-.flex-center { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center; }
+body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: #1a0f0d; background-image: radial-gradient(circle at center, #3d2b27 0%, #1a0f0d 100%); color: #efebe9; min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; align-items: center; }
 
 /* Landing Page */
-#landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); z-index: 1000; transition: opacity 0.8s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-.login-box { background: rgba(45, 27, 24, 0.8); padding: 30px; border-radius: 20px; border: 1px solid #d4af37; width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
+#landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #4e342e 0%, #1a0f0d 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.8s ease; overflow-y: auto; padding: 20px 0; }
+.logo-landing { width: 100px; margin-bottom: 10px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); }
+.login-box { background: rgba(45, 27, 24, 0.8); padding: 25px; border-radius: 15px; border: 1px solid #d4af37; width: 300px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.login-input { background: rgba(26, 15, 13, 0.9); border: 1px solid rgba(212, 175, 55, 0.5); padding: 10px; color: white; border-radius: 5px; outline: none; }
+.or-divider { margin: 10px 0; font-size: 0.8em; color: #d4af37; opacity: 0.6; display: flex; align-items: center; gap: 10px; }
+.or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: rgba(212, 175, 55, 0.3); }
+.enter-btn { background: #5d4037; color: #fff; border: 1px solid #d4af37; padding: 10px; border-radius: 30px; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: 0.3s; font-size: 0.8em; text-align: center; }
+.enter-btn:hover { background: #d4af37; color: #1a0f0d; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
+.google-btn { background: #fff; color: #444; border: none; }
 
-/* Main Components */
-.main-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 40px 20px 140px 20px; position: relative; z-index: 2; }
-.logo-main { width: 90px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(212,175,55,0.3)); }
-
-.welcome-title { font-size: 2.2em; letter-spacing: 4px; text-transform: uppercase; margin: 10px 0; background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: textShine 4s linear infinite; }
-.user-greeting { font-size: 1em; color: rgba(215, 204, 200, 0.75); margin-bottom: 30px; }
-
-/* Search Bar */
-.search-wrapper { width: 100%; max-width: 500px; margin: 0 auto 40px auto; position: relative; }
-.search-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.4); padding: 14px 25px; border-radius: 30px; color: white; outline: none; transition: 0.3s; text-align: center; }
-.search-input:focus { border-color: #d4af37; background: rgba(45,27,24,0.6); box-shadow: 0 0 15px rgba(212,175,55,0.2); }
-
-/* Library Shelf System */
-.library-shelf { width: 100%; background: #2d1b18; border: 12px solid #1a0f0d; box-shadow: inset 0 0 100px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6); padding: 80px 20px 60px 20px; position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 40px; border-radius: 8px; }
-.shelf-lamp { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 180px; height: 18px; background: linear-gradient(to bottom, #444, #222); border-bottom: 3px solid #d4af37; border-radius: 10px 10px 0 0; z-index: 10; }
-.lamp-glow { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 800px; height: 400px; background: radial-gradient(ellipse at top, rgba(212, 175, 55, 0.18) 0%, transparent 75%); pointer-events: none; }
-
-/* Book Items */
-.book-item { display: flex; flex-direction: column; align-items: center; width: 170px; position: relative; transition: 0.3s; }
-.book-box { width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px; cursor: pointer; transition: 0.4s ease; box-shadow: -5px 10px 20px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
-.book-box:hover { transform: translateY(-10px) rotateY(-5deg); box-shadow: 10px 15px 30px rgba(0,0,0,0.7), 0 0 20px rgba(212,175,55,0.3); }
-
-/* Coming Soon Special */
-.coming-soon-banner {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg);
-    background: #d4af37; color: #1a0f0d; padding: 8px 25px; font-weight: 900;
-    text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; white-space: nowrap;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 5; border: 1px solid #1a0f0d;
-}
-
-.book-title { margin-top: 20px; font-weight: 600; font-size: 0.9em; text-align: center; color: #d7ccc8; line-height: 1.4; }
-
-/* Navigation Bar */
-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(26, 15, 13, 0.96); backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center; gap: 10px; padding: 20px 10px; z-index: 100; border-top: 1px solid rgba(212,175,55,0.3); flex-wrap: wrap; }
-.nav-btn { background: rgba(78, 52, 46, 0.5); color: #d4af37; border: 1px solid rgba(212, 175, 55, 0.5); padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 0.8em; display: flex; align-items: center; gap: 8px; }
-.nav-btn:hover { background: #d4af37; color: #1a0f0d; transform: translateY(-3px); }
+/* Main Container Presisi */
+.main-container { width: 100%; max-width: 1100px; margin: 40px auto; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 2; box-sizing: border-box; }
+.logo-main { width: 80px; margin-bottom: 10px; }
+.welcome-title { font-size: 2em; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 20px; text-align: center; background: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: textShine 4s linear infinite; color: #d7ccc8; }
+.user-greeting { font-size: 1em; color: rgba(215, 204, 200, 0.7); margin-bottom: 25px; letter-spacing: 1px; text-align: center; }
 
 /* Elements */
-@keyframes textShine { to { background-position: 200% center; } }
-.dust-particle { position: fixed; background: #ffd700; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0; animation: float-dust linear infinite; }
-@keyframes float-dust { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 0.4; } 100% { transform: translateY(-100vh) translateX(30px); opacity: 0; } }
+.search-wrapper { width: 100%; max-width: 400px; margin-bottom: 30px; display: flex; justify-content: center; }
+.search-input { width: 100%; background: rgba(45, 27, 24, 0.6); border: 1px solid #d4af37; padding: 12px 25px; border-radius: 25px; color: white; outline: none; text-align: center; }
 
-/* Reader */
-.page { display: none; width: 100%; }
+/* Library Shelf */
+.library-shelf { width: 100%; background: #2d1b18; border: 12px solid #1a0f0d; box-shadow: inset 0 0 100px rgba(0,0,0,0.8), 0 30px 60px rgba(0,0,0,0.6); padding: 80px 20px 40px 20px; position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; border-radius: 4px; box-sizing: border-box; }
+.shelf-lamp { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 160px; height: 15px; background: linear-gradient(to bottom, #444, #222); border-bottom: 3px solid #d4af37; border-radius: 8px 8px 0 0; z-index: 10; }
+.lamp-glow { position: absolute; top: 7px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; height: 350px; background: radial-gradient(ellipse at top, rgba(212, 175, 55, 0.15) 0%, transparent 75%); pointer-events: none; }
+
+/* Book Items */
+.book-item { display: flex; flex-direction: column; align-items: center; width: 170px; margin-bottom: 20px; position: relative; animation: float-book 6s ease-in-out infinite; }
+@keyframes float-book { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.book-box { width: 160px; height: 230px; background-size: cover; background-position: center; border-radius: 2px 8px 8px 2px; cursor: pointer; transition: 0.5s; box-shadow: -5px 5px 15px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+.book-box:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.6); }
+
+/* Banner Coming Soon */
+.coming-soon-banner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg); background-color: rgba(212, 175, 55, 0.95); color: #1a0f0d; padding: 10px 20px; font-weight: bold; text-transform: uppercase; font-size: 0.9em; letter-spacing: 2px; white-space: nowrap; border: 2px solid #1a0f0d; box-shadow: 0 5px 15px rgba(0,0,0,0.6); z-index: 5; pointer-events: none; }
+
+.book-title { margin-top: 25px; font-weight: bold; font-size: 0.9em; text-align: center; animation: textShine 3s linear infinite; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; background-image: linear-gradient(to right, #d7ccc8 20%, #fff 50%, #d7ccc8 80%); background-size: 200% auto; }
+@keyframes textShine { to { background-position: 200% center; } }
+.badge-new { position: absolute; top: -10px; right: -10px; background: #d4af37; color: #1a0f0d; padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; z-index: 10; }
+.book-tooltip { position: absolute; bottom: 100%; background: rgba(43, 29, 26, 0.95); color: #d7ccc8; padding: 10px; border-radius: 5px; border: 1px solid #d4af37; font-size: 0.75em; width: 180px; text-align: center; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 50; pointer-events: none; }
+.book-item:hover .book-tooltip { opacity: 1; visibility: visible; transform: translateY(-10px); }
+
+/* Admin & Pages */
+.admin-card { width: 100%; max-width: 900px; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px; border: 1px solid rgba(212, 175, 55, 0.2); margin-bottom: 20px; box-sizing: border-box; }
+.admin-input { width: 100%; padding: 10px; margin: 10px 0; background: #2d1b18; border: 1px solid #d4af37; color: white; border-radius: 5px; box-sizing: border-box; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 12px; border-bottom: 1px solid #d4af37; color: #d4af37; font-size: 0.8em; }
+td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9em; }
+
+/* Navigasi */
+nav { position: fixed; bottom: 0; width: 100%; background: rgba(26, 15, 13, 0.95); backdrop-filter: blur(8px); display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; padding: 20px 10px; z-index: 100; border-top: 1px solid rgba(212, 175, 55, 0.2); }
+.nav-btn { background: #4e342e; color: #d4af37; border: 1px solid #d4af37; padding: 10px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 0.8em; display: flex; align-items: center; gap: 10px; }
+.nav-btn:hover { background: #d4af37; color: #1a0f0d; transform: translateY(-5px); }
+
+/* Music Equalizer */
+.equalizer { display: flex; align-items: flex-end; gap: 3px; height: 18px; width: 22px; }
+.eq-bar { width: 4px; background: #fff59d; animation: eq-anim 0.5s ease-in-out infinite alternate; animation-play-state: paused; transition: background 0.3s; }
+@keyframes eq-anim { 0% { height: 4px; } 100% { height: 18px; } }
+
+/* Page Control */
+.page { display: none; width: 100%; padding-bottom: 120px; }
 .active { display: block; }
 #reader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; display: flex; flex-direction: column; }
-#reader iframe { flex: 1; border: none; width: 100%; }
+#reader iframe { width: 100%; height: calc(100vh - 65px); border: none; flex: 1; }
+
+.dust-particle { position: fixed; background: #ffd700; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0; animation: float-dust linear infinite; }
+@keyframes float-dust { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 0.6; } 100% { transform: translateY(-100vh) translateX(40px); opacity: 0; } }
 </style>
 </head>
 
@@ -240,114 +287,152 @@ nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(26, 15,
 <audio id="bg-music" src="https://raw.githubusercontent.com/arvnnad4m-jpg/chill-backsound/bdf81b6bee6dd2efd7219431a2f09b4a9132e533/felixdump-love-shine-by-leeheesang-instrumental.mp3" loop></audio>
 
 <div id="landing-page">
-  <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-landing" style="width:100px; margin-bottom:20px;">
-  <div class="welcome-title" style="margin-bottom:30px;">Smanda Library</div>
+  <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-landing">
+  <div class="welcome-title">Smanda Library</div>
   <div class="login-box">
-    <input type="email" id="email-input" class="login-input" placeholder="Email Address" style="padding:12px; border-radius:8px; border:1px solid #d4af37; background:rgba(0,0,0,0.3); color:white; outline:none;">
-    <input type="password" id="pass-input" class="login-input" placeholder="Password" style="padding:12px; border-radius:8px; border:1px solid #d4af37; background:rgba(0,0,0,0.3); color:white; outline:none;">
-    <button class="nav-btn" style="justify-content:center; background:#d4af37; color:#1a0f0d;" onclick="playClick(); loginEmail()">Login</button>
-    <div style="font-size:0.7em; color:#d4af37; text-align:center; margin:10px 0; opacity:0.6;">— OR —</div>
-    <button class="nav-btn" style="justify-content:center; background:white; color:#444; border:none;" onclick="playClick(); startLibrary()">Continue with Google</button>
+    <input type="email" id="email-input" class="login-input" placeholder="Email Address">
+    <input type="password" id="pass-input" class="login-input" placeholder="Password">
+    <button class="enter-btn" onclick="playClick(); loginEmail()">Login Email</button>
+    <button class="enter-btn" style="background:transparent; border:none; font-size:0.65em; opacity:0.7" onclick="registerEmail()">Belum punya akun? Daftar</button>
+    <div class="or-divider">OR</div>
+    <button class="enter-btn google-btn" onclick="playClick(); startLibrary()">Login with Google</button>
   </div>
 </div>
 
 <div id="home" class="page active">
-  <div class="main-container flex-center">
+  <div class="main-container">
     <img src="https://sman2kuningan.sch.id/wp-content/themes/mading/images/logo.png" class="logo-main">
     <h2 class="welcome-title">Digital Archive</h2>
-    <div id="user-greeting" class="user-greeting">Memuat data...</div>
+    
+    <div id="user-greeting" class="user-greeting">Selamat Datang...</div>
     
     <div class="search-wrapper">
-        <input type="text" id="search-input" class="search-input" placeholder="Cari majalah berdasarkan bulan..." onkeyup="filterBooks()">
+        <input type="text" id="search-input" class="search-input" placeholder="Cari judul majalah..." onkeyup="filterBooks()">
     </div>
-
+    
     <div class="library-shelf">
       <div class="shelf-lamp"></div><div class="lamp-glow"></div>
       
       <div id="dynamic-books" style="display:contents"></div>
       
       <div class="book-item">
-        <div class="book-tooltip">November Edition</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/905f390c0d.html', 'Smanda Vibes (Nov)')"></div>
-        <p class="book-title">Smanda Vibes<br>Nov Edition</p>
+        <div class="book-tooltip">Edisi perdana yang penuh semangat kebersamaan.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/905f390c0d.html', 'Smanda Vibes (November)')"></div>
+        <p class="book-title">Smanda Vibes<br>(November Edition)</p>
+      </div>
+      <div class="book-item">
+        <div class="book-tooltip">Awal tahun baru dengan cerita-cerita segar dari sekolah.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/44752310d5.html', 'Smanda Vibes (January)')"></div>
+        <p class="book-title">Smanda Vibes<br>(January Edition)</p>
+      </div>
+      <div class="book-item">
+        <div class="book-tooltip">Merayakan momen kasih sayang dan prestasi siswa.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'Smanda Vibes (February)')"></div>
+        <p class="book-title">Smanda Vibes<br>(February Edition)</p>
+      </div>
+      <div class="book-item">
+        <div class="book-tooltip">Edisi spesial Maret dengan liputan acara besar sekolah.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://online.fliphtml5.com/owlqz/bxoy/', 'Smanda Vibes (March)')"></div>
+        <p class="book-title">Smanda Vibes<br>(March Edition)</p>
+      </div>
+      <div class="book-item">
+        <div class="book-tooltip">Edisi April: Menilik kreativitas tanpa batas.</div>
+        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'Smanda Vibes (April)')"></div>
+        <p class="book-title">Smanda Vibes<br>(April Edition)</p>
       </div>
 
       <div class="book-item">
-        <div class="book-tooltip">January Edition</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/44752310d5.html', 'Smanda Vibes (Jan)')"></div>
-        <p class="book-title">Smanda Vibes<br>Jan Edition</p>
-      </div>
-
-      <div class="book-item">
-        <div class="book-tooltip">February Edition</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/08b8d4b8c7.html', 'Smanda Vibes (Feb)')"></div>
-        <p class="book-title">Smanda Vibes<br>Feb Edition</p>
-      </div>
-
-      <div class="book-item">
-        <div class="book-tooltip">March Edition</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://online.fliphtml5.com/owlqz/bxoy/', 'Smanda Vibes (Mar)')"></div>
-        <p class="book-title">Smanda Vibes<br>Mar Edition</p>
-      </div>
-
-      <div class="book-item">
-        <div class="book-tooltip">April Edition</div>
-        <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg');" onclick="playClick(); openBook('https://heyzine.com/flip-book/1caa336792.html', 'Smanda Vibes (Apr)')"></div>
-        <p class="book-title">Smanda Vibes<br>Apr Edition</p>
-      </div>
-
-      <div class="book-item">
-        <div class="book-tooltip">Sedang dalam proses pengerjaan.</div>
+        <div class="book-tooltip">Nantikan edisi terbaru yang sedang kami siapkan!</div>
         <div class="book-box" style="background-image: url('https://images.rawpixel.com/image_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvbHIvcGYtczYxLWppcjAxNTFjLWwtLmpwZw.jpg'); opacity: 0.4; filter: grayscale(1); cursor: default;">
             <div class="coming-soon-banner">COMING SOON</div>
         </div>
-        <p class="book-title" style="opacity:0.6">Edisi Mendatang<br>...</p>
+        <p class="book-title" style="opacity:0.5">Edisi Selanjutnya<br>(Coming Soon)</p>
       </div>
 
     </div>
   </div>
 </div>
 
+<div id="history-page" class="page">
+  <div class="main-container">
+    <h2 class="welcome-title">Your Reading History</h2>
+    <button class="enter-btn" style="margin-bottom:40px; background:#ff5252; border-color:#ff5252; padding: 10px 30px;" onclick="clearHistory()">Hapus Semua History</button>
+    <div id="history-list" style="display:flex; flex-wrap:wrap; gap:30px; justify-content:center; width:100%;"></div>
+  </div>
+</div>
+
+<div id="admin-page" class="page">
+  <div class="main-container">
+    <h2 class="welcome-title">Admin Control</h2>
+    <div class="admin-card" id="admin-upload-section" style="display:none;">
+      <h3 style="color:#d4af37; margin-top:0;">Upload Majalah Baru</h3>
+      <input type="text" id="btitle" class="admin-input" placeholder="Judul Majalah">
+      <input type="text" id="burl" class="admin-input" placeholder="URL Heyzine">
+      <input type="text" id="bcover" class="admin-input" placeholder="URL Gambar Cover">
+      <input type="text" id="bdesc" class="admin-input" placeholder="Deskripsi Singkat">
+      <button class="enter-btn" onclick="addNewBook()" style="width:100%; margin-top:10px;">Tambahkan</button>
+    </div>
+    <div class="admin-card" id="admin-manage-section" style="display:none;">
+        <h3 style="color:#d4af37; margin-top:0;">Manajemen Buku</h3>
+        <table><thead><tr><th>Judul</th><th>Aksi</th></tr></thead><tbody id="admin-manage-body"></tbody></table>
+    </div>
+    <div class="admin-card">
+      <h3 style="color:#d4af37; margin-top:0;">User Activity</h3>
+      <div style="overflow-x:auto;">
+          <table><thead><tr><th>User</th><th>Email</th><th>Reading</th><th>Waktu</th></tr></thead><tbody id="admin-log-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="reader" class="page">
-    <button class="nav-btn" style="width:100%; border-radius:0; justify-content:center; background:#1a0f0d; border:none; padding:15px;" onclick="playClick(); showPage('home')">← KEMBALI KE PERPUSTAKAAN</button>
-    <iframe id="book-frame" src=""></iframe>
+  <button class="nav-btn" style="width:100%; border-radius:0; justify-content:center; background:#1a0f0d; border:none; border-bottom: 1px solid #d4af37; padding:15px;" onclick="playClick(); showPage('home')">← KEMBALI KE RAK</button>
+  <iframe id="book-frame" src="" allowfullscreen></iframe>
 </div>
 
 <nav>
-  <button class="nav-btn" onclick="playClick(); showPage('home')">🏠 Lobby</button>
-  <button class="nav-btn" id="admin-nav-btn" style="display:none;" onclick="alert('Fitur Admin di Panel Samping')">⚙️ Admin</button>
+  <button class="nav-btn" onclick="playClick(); showPage('home')">Main Lobby</button>
+  <button class="nav-btn" onclick="playClick(); showPage('history-page')">History</button>
+  <button class="nav-btn" id="admin-nav-btn" style="display:none;" onclick="playClick(); showPage('admin-page')">Admin</button>
   <button class="nav-btn" id="music-toggle" onclick="playClick(); toggleMusic()">
-    <span id="music-text">🎵 Play</span>
+    <span id="music-text">Play Music</span>
+    <div class="equalizer"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>
   </button>
-  <button class="nav-btn" onclick="logoutLibrary()" style="color:#ff5252; border-color:rgba(255,82,82,0.3);">🚪 Logout</button>
+  <button class="nav-btn" onclick="logoutLibrary()" style="color:#ff5252; border-color:#ff5252;">Logout</button>
 </nav>
 
 <script>
 const bgMusic = document.getElementById('bg-music');
+const eqBars = document.querySelectorAll('.eq-bar');
+
 function createDust() {
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 40; i++) {
     let dust = document.createElement('div');
     dust.className = 'dust-particle';
-    let size = Math.random() * 2 + 1 + 'px';
+    let size = Math.random() * 3 + 1 + 'px';
     dust.style.width = size; dust.style.height = size;
     dust.style.left = Math.random() * 100 + 'vw'; dust.style.top = Math.random() * 100 + 'vh';
-    dust.style.animationDuration = Math.random() * 5 + 10 + 's';
+    dust.style.animationDuration = Math.random() * 8 + 12 + 's';
     document.body.appendChild(dust);
   }
 }
 window.onload = createDust;
 function playClick() { const sfx = document.getElementById('click-sfx'); sfx.currentTime = 0; sfx.play(); }
+
 function showPage(id){
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(id === 'home') { document.getElementById('book-frame').src = ""; bgMusic.volume = 1.0; } 
-  else { bgMusic.volume = 0.2; }
+  else if(id === 'reader') { bgMusic.volume = 0.3; }
 }
+
 function toggleMusic() {
   if (bgMusic.paused) {
-    bgMusic.play(); document.getElementById('music-text').textContent = "🎵 Playing";
+    bgMusic.play(); document.getElementById('music-text').textContent = "Pause Music";
+    eqBars.forEach(bar => bar.style.animationPlayState = 'running');
   } else {
-    bgMusic.pause(); document.getElementById('music-text').textContent = "🎵 Paused";
+    bgMusic.pause(); document.getElementById('music-text').textContent = "Play Music";
+    eqBars.forEach(bar => bar.style.animationPlayState = 'paused');
   }
 }
 </script>
